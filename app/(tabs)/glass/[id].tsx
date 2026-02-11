@@ -1,5 +1,7 @@
-import { View, Text, StyleSheet, Pressable } from "react-native";
+import { View, Text, StyleSheet } from "react-native";
 import { useLocalSearchParams, router } from "expo-router";
+import Button from "../../../src/components/Button";
+
 
 const MOCK_GLASSES = [
   { id: "1", name: "Chimay Trappistes", brand: "Chimay", description: "Verre officiel Chimay." },
@@ -35,12 +37,8 @@ export default function GlassDetailScreen() {
           🔒 Connectez-vous pour ajouter à votre collection
         </Text>
 
-        <Pressable
-          style={styles.button}
-          onPress={() => router.push("/login")}
-        >
-          <Text style={styles.buttonText}>Se connecter</Text>
-        </Pressable>
+        <Button label="Se connecter" onPress={() => router.push("/login")} />
+
       </View>
     </View>
   );
