@@ -1,10 +1,11 @@
+import React from "react";
 import { View, Text, StyleSheet } from "react-native";
 
-export default function HomeVisitorScreen() {
+export default function HomeUserScreen() {
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Accueil Visiteur</Text>
-      <Text>Badier Beer – Catalogue public</Text>
+      <Text style={styles.title}>Accueil Utilisateur</Text>
+      <Text>Connecté ✅</Text>
     </View>
   );
 }
