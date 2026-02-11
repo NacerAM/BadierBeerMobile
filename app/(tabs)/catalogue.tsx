@@ -1,5 +1,9 @@
 import { View, Text, StyleSheet, FlatList, Pressable } from "react-native";
 import { router } from "expo-router";
+import { colors } from "../../src/theme/colors";
+import { spacing } from "../../src/theme/spacing";
+import { typography } from "../../src/theme/typography";
+
 
 const MOCK_GLASSES = [
   { id: "1", name: "Chimay Trappistes", brand: "Chimay" },
@@ -37,15 +41,16 @@ export default function CataloguePublicScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, paddingTop: 24, paddingHorizontal: 16 },
-  title: { fontSize: 22, fontWeight: "600", marginBottom: 12 },
-  list: { gap: 12, paddingBottom: 24 },
+  container: { flex: 1, paddingTop: spacing.lg, paddingHorizontal: spacing.md, backgroundColor: colors.bg },
+  title: { fontSize: typography.h1, fontWeight: "600", marginBottom: spacing.md, color: colors.text },
+  list: { gap: spacing.md, paddingBottom: spacing.lg },
   card: {
     borderWidth: 1,
-    borderColor: "#ddd",
+    borderColor: colors.border,
     borderRadius: 12,
-    padding: 14,
+    padding: spacing.md,
+    backgroundColor: colors.card,
   },
-  cardTitle: { fontSize: 16, fontWeight: "600" },
-  cardSubtitle: { marginTop: 4, color: "#666" },
+  cardTitle: { fontSize: 16, fontWeight: "600", color: colors.text },
+  cardSubtitle: { marginTop: 4, color: colors.muted },
 });
