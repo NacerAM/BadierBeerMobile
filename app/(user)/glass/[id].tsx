@@ -1,61 +1,130 @@
-import { View, Text, StyleSheet } from "react-native";
+import React, { useEffect, useMemo, useState } from "react";
+import { View, Text, StyleSheet, ActivityIndicator, Image, ScrollView } from "react-native";
 import { useLocalSearchParams } from "expo-router";
 import Button from "../../../src/components/Button";
-import { useCollection } from "../../../src/store/useCollection";
 import { colors } from "../../../src/theme/colors";
 import { spacing } from "../../../src/theme/spacing";
 import { typography } from "../../../src/theme/typography";
-
-const MOCK_GLASSES = [
-  { id: "1", name: "Chimay Trappistes", brand: "Chimay", description: "Verre officiel Chimay." },
-  { id: "2", name: "Duvel Tulip", brand: "Duvel", description: "Verre tulipe Duvel." },
-  { id: "3", name: "Leffe Calice", brand: "Leffe", description: "Calice traditionnel Leffe." },
-  { id: "4", name: "Orval Classic", brand: "Orval", description: "Verre emblématique Orval." },
-];
+import { getGlassApi, Glass } from "../../../src/api/glassesApi";
+import { addToCollectionApi, removeFromCollectionApi, listMyCollectionApi } from "../../../src/api/collectionApi";
 
 export default function GlassDetailUserScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
-  const { add, has } = useCollection();
+  const glassId = Number(id);
 
-  const glass = MOCK_GLASSES.find((g) => g.id === id);
+  const [glass, setGlass] = useState<Glass | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  if (!glass) {
+  const [inCollection, setInCollection] = useState(false);
+  const [saving, setSaving] = useState(false);
+
+  async function load() {
+    try {
+      setLoading(true);
+      setError(null);
+
+      const [g, col] = await Promise.all([getGlassApi(glassId), listMyCollectionApi()]);
+      setGlass(g);
+
+      const ids = new Set(col.items.map((x) => x.glassId));
+      setInCollection(ids.has(glassId));
+    } catch (e: any) {
+      setError(e?.message || "Erreur réseau");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    load();
+  }, [glassId]);
+
+  const primaryImage = useMemo(() => {
+    return glass?.images?.find((img) => img.isPrimary)?.url || glass?.images?.[0]?.url;
+  }, [glass]);
+
+  async function toggleCollection() {
+    try {
+      setSaving(true);
+      if (inCollection) {
+        await removeFromCollectionApi(glassId);
+        setInCollection(false);
+      } else {
+        await addToCollectionApi(glassId);
+        setInCollection(true);
+      }
+    } catch (e: any) {
+      setError(e?.message || "Erreur");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  if (loading) {
     return (
-      <View style={styles.container}>
-        <Text>Verre introuvable</Text>
+      <View style={styles.center}>
+        <ActivityIndicator />
+        <Text style={styles.centerText}>Chargement…</Text>
       </View>
     );
   }
 
-  const already = has(glass.id);
+  if (error || !glass) {
+    return (
+      <View style={styles.center}>
+        <Text style={styles.errorText}>{error || "Verre introuvable"}</Text>
+        <Text style={styles.retry} onPress={load}>
+          Réessayer
+        </Text>
+      </View>
+    );
+  }
 
   return (
-    <View style={styles.container}>
-      <View style={styles.imagePlaceholder}>
-        <Text style={{ color: colors.muted }}>Image du verre</Text>
-      </View>
+    <ScrollView style={styles.container} contentContainerStyle={{ paddingBottom: spacing.xl }}>
+      {primaryImage ? (
+        <Image source={{ uri: primaryImage }} style={styles.image} />
+      ) : (
+        <View style={styles.imagePlaceholder}>
+          <Text style={{ color: colors.muted }}>Aucune image</Text>
+        </View>
+      )}
 
       <Text style={styles.title}>{glass.name}</Text>
-      <Text style={styles.brand}>{glass.brand}</Text>
-      <Text style={styles.description}>{glass.description}</Text>
+      <Text style={styles.brand}>{glass.Manufacturer?.name || "—"}</Text>
 
-      <View style={styles.actions}>
+      {glass.description ? <Text style={styles.description}>{glass.description}</Text> : null}
+
+      <View style={{ marginTop: spacing.xl }}>
         <Button
-          label={already ? "Déjà dans ma collection" : "Ajouter à ma collection"}
-          onPress={() => add(glass.id)}
-          disabled={already}
+          label={inCollection ? "Retirer de ma collection" : "Ajouter à ma collection"}
+          variant={inCollection ? "secondary" : "primary"}
+          onPress={toggleCollection}
+          disabled={saving}
         />
       </View>
-    </View>
+    </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1, padding: spacing.lg, backgroundColor: colors.bg },
-  imagePlaceholder: {
-    height: 200,
+  center: { flex: 1, alignItems: "center", justifyContent: "center", gap: 10, padding: spacing.lg },
+  centerText: { color: colors.muted },
+  errorText: { color: "#991B1B", fontWeight: "700", textAlign: "center" },
+  retry: { color: colors.primaryDark, fontWeight: "800" },
+
+  image: {
+    height: 220,
+    borderRadius: 14,
+    marginBottom: spacing.lg,
     backgroundColor: colors.card,
-    borderRadius: 12,
+  },
+  imagePlaceholder: {
+    height: 220,
+    backgroundColor: colors.card,
+    borderRadius: 14,
     alignItems: "center",
     justifyContent: "center",
     marginBottom: spacing.lg,
@@ -63,7 +132,6 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
   },
   title: { fontSize: typography.h1, fontWeight: "800", color: colors.text },
-  brand: { marginTop: 4, color: colors.muted },
-  description: { marginTop: spacing.md, fontSize: typography.body, color: colors.text },
-  actions: { marginTop: spacing.xl },
+  brand: { marginTop: 6, color: colors.muted },
+  description: { marginTop: spacing.md, fontSize: typography.body, color: colors.text, lineHeight: 20 },
 });
