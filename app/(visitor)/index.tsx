@@ -4,8 +4,23 @@ import { colors } from "../../src/theme/colors";
 import { spacing } from "../../src/theme/spacing";
 import { typography } from "../../src/theme/typography";
 import Button from "../../src/components/Button";
+import { useEffect } from "react";
+import { healthApi } from "../../src/api/healthApi";
 
 export default function HomeVisitorScreen() {
+  useEffect(() => {
+  async function test() {
+    try {
+      const res = await healthApi();
+      console.log("HEALTH OK:", res);
+    } catch (err) {
+      console.log("HEALTH ERROR:", err);
+    }
+  }
+
+  test();
+}, []);
+
   return (
     <View style={styles.container}>
       <View style={styles.hero}>

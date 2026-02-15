@@ -1,30 +1,42 @@
-import React, { useMemo, useState } from "react";
-import { View, Text, StyleSheet, FlatList, Pressable, TextInput } from "react-native";
+import React, { useEffect, useMemo, useState } from "react";
+import { View, Text, StyleSheet, FlatList, Pressable, TextInput, ActivityIndicator } from "react-native";
 import { router } from "expo-router";
 import { colors } from "../../src/theme/colors";
 import { spacing } from "../../src/theme/spacing";
 import { typography } from "../../src/theme/typography";
-
-const MOCK_GLASSES = [
-  { id: "1", name: "Chimay Trappistes", brand: "Chimay", status: "VALIDÉ" },
-  { id: "2", name: "Duvel Tulip", brand: "Duvel", status: "VALIDÉ" },
-  { id: "3", name: "Leffe Calice", brand: "Leffe", status: "VALIDÉ" },
-  { id: "4", name: "Orval Classic", brand: "Orval", status: "VALIDÉ" },
-];
+import { Glass, listGlassesApi } from "../../src/api/glassesApi";
 
 export default function CataloguePublicScreen() {
   const [q, setQ] = useState("");
+  const [items, setItems] = useState<Glass[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  async function load() {
+    try {
+      setLoading(true);
+      setError(null);
+      const res = await listGlassesApi(1, 50);
+      setItems(res.items);
+    } catch (e: any) {
+      setError(e?.message || "Erreur réseau");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    load();
+  }, []);
 
   const filtered = useMemo(() => {
     const query = q.trim().toLowerCase();
-    if (!query) return MOCK_GLASSES;
-    return MOCK_GLASSES.filter((g) => {
-      return (
-        g.name.toLowerCase().includes(query) ||
-        g.brand.toLowerCase().includes(query)
-      );
+    if (!query) return items;
+    return items.filter((g) => {
+      const brand = g.Manufacturer?.name || "";
+      return g.name.toLowerCase().includes(query) || brand.toLowerCase().includes(query);
     });
-  }, [q]);
+  }, [q, items]);
 
   return (
     <View style={styles.container}>
@@ -39,34 +51,46 @@ export default function CataloguePublicScreen() {
         autoCapitalize="none"
       />
 
-      <FlatList
-        data={filtered}
-        keyExtractor={(item) => item.id}
-        contentContainerStyle={styles.list}
-        renderItem={({ item }) => (
-          <Pressable
-            style={styles.card}
-            onPress={() =>
-              router.push({
-                pathname: "/(tabs)/glass/[id]",
-                params: { id: item.id },
-              })
-            }
-          >
-            <View style={styles.cardTop}>
-              <Text style={styles.cardTitle}>{item.name}</Text>
-              <View style={styles.badge}>
-                <Text style={styles.badgeText}>{item.status}</Text>
+      {loading ? (
+        <View style={styles.center}>
+          <ActivityIndicator />
+          <Text style={styles.centerText}>Chargement…</Text>
+        </View>
+      ) : error ? (
+        <View style={styles.center}>
+          <Text style={styles.errorText}>{error}</Text>
+          <Text style={styles.retry} onPress={load}>
+            Réessayer
+          </Text>
+        </View>
+      ) : (
+        <FlatList
+          data={filtered}
+          keyExtractor={(item) => String(item.id)}
+          contentContainerStyle={styles.list}
+          renderItem={({ item }) => (
+            <Pressable
+              style={styles.card}
+              onPress={() =>
+                router.push({
+                  pathname: "/(visitor)/glass/[id]",
+                  params: { id: String(item.id) },
+                } as any)
+              }
+            >
+              <View style={styles.cardTop}>
+                <Text style={styles.cardTitle}>{item.name}</Text>
+                <View style={styles.badge}>
+                  <Text style={styles.badgeText}>VALIDÉ</Text>
+                </View>
               </View>
-            </View>
 
-            <Text style={styles.cardSubtitle}>{item.brand}</Text>
-          </Pressable>
-        )}
-        ListEmptyComponent={
-          <Text style={styles.empty}>Aucun résultat.</Text>
-        }
-      />
+              <Text style={styles.cardSubtitle}>{item.Manufacturer?.name || "—"}</Text>
+            </Pressable>
+          )}
+          ListEmptyComponent={<Text style={styles.empty}>Aucun résultat.</Text>}
+        />
+      )}
     </View>
   );
 }
@@ -94,6 +118,10 @@ const styles = StyleSheet.create({
     color: colors.text,
     marginBottom: spacing.md,
   },
+  center: { flex: 1, alignItems: "center", justifyContent: "center", gap: 10 },
+  centerText: { color: colors.muted },
+  errorText: { color: "#991B1B", fontWeight: "700", textAlign: "center" },
+  retry: { color: colors.primaryDark, fontWeight: "800" },
   list: { gap: spacing.md, paddingBottom: spacing.xl },
   card: {
     borderWidth: 1,

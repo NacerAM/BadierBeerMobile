@@ -7,6 +7,7 @@ import { typography } from "../../src/theme/typography";
 import Input from "../../src/components/Input";
 import Button from "../../src/components/Button";
 import { useAuth } from "../../src/store/useAuth";
+import { loginApi } from "../../src/api/authApi";
 
 export default function LoginScreen() {
   const { login } = useAuth();
@@ -26,8 +27,10 @@ export default function LoginScreen() {
 
     if (Object.keys(e).length === 0) {
       // ✅ Simulation de login (plus tard : appel API)
-      await login("FAKE_JWT_TOKEN");
+      const res = await loginApi(email, password);
+      await login(res.token);
       router.replace("/(user)/" as any);
+
     }
   }
 

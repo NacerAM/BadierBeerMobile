@@ -1,91 +1,104 @@
-import { View, Text, StyleSheet } from "react-native";
+import React, { useEffect, useState } from "react";
+import { View, Text, StyleSheet, ActivityIndicator, Image, ScrollView } from "react-native";
 import { useLocalSearchParams, router } from "expo-router";
 import Button from "../../../src/components/Button";
+import { colors } from "../../../src/theme/colors";
+import { spacing } from "../../../src/theme/spacing";
+import { typography } from "../../../src/theme/typography";
+import { getGlassApi, Glass } from "../../../src/api/glassesApi";
 
-
-const MOCK_GLASSES = [
-  { id: "1", name: "Chimay Trappistes", brand: "Chimay", description: "Verre officiel Chimay." },
-  { id: "2", name: "Duvel Tulip", brand: "Duvel", description: "Verre tulipe Duvel." },
-  { id: "3", name: "Leffe Calice", brand: "Leffe", description: "Calice traditionnel Leffe." },
-];
-
-export default function GlassDetailScreen() {
+export default function GlassDetailVisitorScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
 
-  const glass = MOCK_GLASSES.find((g) => g.id === id);
+  const [glass, setGlass] = useState<Glass | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  if (!glass) {
+  async function load() {
+    try {
+      setLoading(true);
+      setError(null);
+      const res = await getGlassApi(Number(id));
+      setGlass(res);
+    } catch (e: any) {
+      setError(e?.message || "Erreur réseau");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    load();
+  }, [id]);
+
+  if (loading) {
     return (
-      <View style={styles.container}>
-        <Text>Verre introuvable</Text>
+      <View style={styles.center}>
+        <ActivityIndicator />
+        <Text style={styles.centerText}>Chargement…</Text>
       </View>
     );
   }
 
-  return (
-    <View style={styles.container}>
-      <View style={styles.imagePlaceholder}>
-        <Text style={{ color: "#888" }}>Image du verre</Text>
+  if (error || !glass) {
+    return (
+      <View style={styles.center}>
+        <Text style={styles.errorText}>{error || "Verre introuvable"}</Text>
+        <Text style={styles.retry} onPress={load}>
+          Réessayer
+        </Text>
       </View>
+    );
+  }
+
+  const primaryImage = glass.images?.find((img) => img.isPrimary)?.url || glass.images?.[0]?.url;
+
+  return (
+    <ScrollView style={styles.container} contentContainerStyle={{ paddingBottom: spacing.xl }}>
+      {primaryImage ? (
+        <Image source={{ uri: primaryImage }} style={styles.image} />
+      ) : (
+        <View style={styles.imagePlaceholder}>
+          <Text style={{ color: colors.muted }}>Aucune image</Text>
+        </View>
+      )}
 
       <Text style={styles.title}>{glass.name}</Text>
-      <Text style={styles.brand}>{glass.brand}</Text>
-      <Text style={styles.description}>{glass.description}</Text>
+      <Text style={styles.brand}>{glass.Manufacturer?.name || "—"}</Text>
 
-      <View style={styles.lockBox}>
-        <Text style={styles.lockText}>
-          🔒 Connectez-vous pour ajouter à votre collection
-        </Text>
+      {glass.description ? <Text style={styles.description}>{glass.description}</Text> : null}
 
-        <Button label="Se connecter" onPress={() => router.push("/login")} />
-
+      <View style={{ marginTop: spacing.xl }}>
+        <Button label="Se connecter pour ajouter à ma collection" onPress={() => router.push("/(visitor)/login" as any)} />
       </View>
-    </View>
+    </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    padding: 16,
+  container: { flex: 1, padding: spacing.lg, backgroundColor: colors.bg },
+  center: { flex: 1, alignItems: "center", justifyContent: "center", gap: 10, padding: spacing.lg },
+  centerText: { color: colors.muted },
+  errorText: { color: "#991B1B", fontWeight: "700", textAlign: "center" },
+  retry: { color: colors.primaryDark, fontWeight: "800" },
+
+  image: {
+    height: 220,
+    borderRadius: 14,
+    marginBottom: spacing.lg,
+    backgroundColor: colors.card,
   },
   imagePlaceholder: {
-    height: 200,
-    backgroundColor: "#eee",
-    borderRadius: 12,
+    height: 220,
+    backgroundColor: colors.card,
+    borderRadius: 14,
     alignItems: "center",
     justifyContent: "center",
-    marginBottom: 16,
+    marginBottom: spacing.lg,
+    borderWidth: 1,
+    borderColor: colors.border,
   },
-  title: {
-    fontSize: 22,
-    fontWeight: "600",
-  },
-  brand: {
-    marginTop: 4,
-    color: "#666",
-  },
-  description: {
-    marginTop: 12,
-    fontSize: 14,
-  },
-  lockBox: {
-    marginTop: 24,
-    padding: 16,
-    backgroundColor: "#f5f5f5",
-    borderRadius: 12,
-  },
-  lockText: {
-    marginBottom: 12,
-  },
-  button: {
-    backgroundColor: "#222",
-    paddingVertical: 12,
-    borderRadius: 10,
-    alignItems: "center",
-  },
-  buttonText: {
-    color: "white",
-    fontWeight: "600",
-  },
+  title: { fontSize: typography.h1, fontWeight: "800", color: colors.text },
+  brand: { marginTop: 6, color: colors.muted },
+  description: { marginTop: spacing.md, fontSize: typography.body, color: colors.text, lineHeight: 20 },
 });
