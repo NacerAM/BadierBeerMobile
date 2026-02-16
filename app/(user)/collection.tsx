@@ -1,64 +1,58 @@
-import React, { useMemo } from "react";
-import { View, Text, StyleSheet, FlatList, Pressable } from "react-native";
-import { router } from "expo-router";
-import Button from "../../src/components/Button";
+import React, { useCallback } from "react";
+import { View, Text, FlatList, ActivityIndicator, StyleSheet } from "react-native";
+import { useFocusEffect, router } from "expo-router";
 import { useCollection } from "../../src/store/useCollection";
 import { colors } from "../../src/theme/colors";
 import { spacing } from "../../src/theme/spacing";
 import { typography } from "../../src/theme/typography";
 
-const MOCK_GLASSES = [
-  { id: "1", name: "Chimay Trappistes", brand: "Chimay" },
-  { id: "2", name: "Duvel Tulip", brand: "Duvel" },
-  { id: "3", name: "Leffe Calice", brand: "Leffe" },
-  { id: "4", name: "Orval Classic", brand: "Orval" },
-];
+export default function CollectionScreen() {
+  const { items, loading, error, refresh } = useCollection();
 
-export default function MyCollectionScreen() {
-  const { glassIds, remove } = useCollection();
-
-  const items = useMemo(() => {
-    return MOCK_GLASSES.filter((g) => glassIds.includes(g.id));
-  }, [glassIds]);
+  useFocusEffect(
+    useCallback(() => {
+      refresh();
+    }, [refresh])
+  );
 
   return (
     <View style={styles.container}>
       <Text style={styles.title}>Ma collection</Text>
 
-      {items.length === 0 ? (
-        <View style={styles.emptyBox}>
-          <Text style={styles.emptyText}>Votre collection est vide.</Text>
-          <Button
-            label="Parcourir le catalogue"
-            onPress={() => router.push("/(user)/catalogue" as any)}
-          />
+      {loading ? (
+        <View style={styles.center}>
+          <ActivityIndicator />
+          <Text style={styles.muted}>Chargement…</Text>
+        </View>
+      ) : error ? (
+        <View style={styles.center}>
+          <Text style={styles.error}>{error}</Text>
+          <Text style={styles.retry} onPress={refresh}>
+            Réessayer
+          </Text>
         </View>
       ) : (
         <FlatList
           data={items}
-          keyExtractor={(i) => i.id}
-          contentContainerStyle={styles.list}
+          keyExtractor={(it) => String(it.id)}
+          contentContainerStyle={{ paddingBottom: spacing.xl }}
+          ListEmptyComponent={<Text style={styles.muted}>Collection vide.</Text>}
           renderItem={({ item }) => (
-            <View style={styles.card}>
-              <Pressable
+            <View style={styles.row}>
+              <Text style={styles.rowTitle}>{item.Glass?.name ?? "Verre"}</Text>
+              <Text style={styles.rowSub}>{item.Glass?.Manufacturer?.name ?? "—"}</Text>
+
+              <Text
+                style={styles.link}
                 onPress={() =>
                   router.push({
                     pathname: "/(user)/glass/[id]",
-                    params: { id: item.id },
+                    params: { id: String(item.glassId) },
                   } as any)
                 }
               >
-                <Text style={styles.cardTitle}>{item.name}</Text>
-                <Text style={styles.cardSubtitle}>{item.brand}</Text>
-              </Pressable>
-
-              <View style={{ marginTop: spacing.sm }}>
-                <Button
-                  label="Retirer"
-                  variant="secondary"
-                  onPress={() => remove(item.id)}
-                />
-              </View>
+                Voir détail →
+              </Text>
             </View>
           )}
         />
@@ -68,28 +62,23 @@ export default function MyCollectionScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    paddingTop: spacing.lg,
-    paddingHorizontal: spacing.md,
-    backgroundColor: colors.bg,
-  },
-  title: {
-    fontSize: typography.h1,
-    fontWeight: "800",
-    color: colors.text,
-    marginBottom: spacing.md,
-  },
-  list: { gap: spacing.md, paddingBottom: spacing.xl },
-  card: {
+  container: { flex: 1, backgroundColor: colors.bg, padding: spacing.lg },
+  title: { fontSize: typography.h1, fontWeight: "800", color: colors.text, marginBottom: spacing.md },
+
+  center: { flex: 1, alignItems: "center", justifyContent: "center", gap: 10 },
+  muted: { color: colors.muted, textAlign: "center" },
+  error: { color: "#991B1B", fontWeight: "700", textAlign: "center" },
+  retry: { color: colors.primaryDark, fontWeight: "800" },
+
+  row: {
     borderWidth: 1,
     borderColor: colors.border,
+    backgroundColor: colors.card,
     borderRadius: 14,
     padding: spacing.md,
-    backgroundColor: colors.card,
+    marginBottom: spacing.md,
   },
-  cardTitle: { fontSize: 16, fontWeight: "700", color: colors.text },
-  cardSubtitle: { marginTop: 6, color: colors.muted },
-  emptyBox: { flex: 1, justifyContent: "center", gap: spacing.md },
-  emptyText: { textAlign: "center", color: colors.muted, marginBottom: spacing.sm },
+  rowTitle: { fontSize: 16, fontWeight: "800", color: colors.text },
+  rowSub: { marginTop: 4, color: colors.muted },
+  link: { marginTop: 10, color: colors.primaryDark, fontWeight: "800" },
 });

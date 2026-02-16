@@ -6,17 +6,17 @@ import { colors } from "../../../src/theme/colors";
 import { spacing } from "../../../src/theme/spacing";
 import { typography } from "../../../src/theme/typography";
 import { getGlassApi, Glass } from "../../../src/api/glassesApi";
-import { addToCollectionApi, removeFromCollectionApi, listMyCollectionApi } from "../../../src/api/collectionApi";
+import { useCollection } from "../../../src/store/useCollection";
 
 export default function GlassDetailUserScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const glassId = Number(id);
 
+  const { has, toggle, refresh } = useCollection();
+
   const [glass, setGlass] = useState<Glass | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-
-  const [inCollection, setInCollection] = useState(false);
   const [saving, setSaving] = useState(false);
 
   async function load() {
@@ -24,11 +24,10 @@ export default function GlassDetailUserScreen() {
       setLoading(true);
       setError(null);
 
-      const [g, col] = await Promise.all([getGlassApi(glassId), listMyCollectionApi()]);
+      // On recharge la collection pour être sûr que le bouton reflète l'état réel
+      await refresh();
+      const g = await getGlassApi(glassId);
       setGlass(g);
-
-      const ids = new Set(col.items.map((x) => x.glassId));
-      setInCollection(ids.has(glassId));
     } catch (e: any) {
       setError(e?.message || "Erreur réseau");
     } finally {
@@ -40,22 +39,20 @@ export default function GlassDetailUserScreen() {
     load();
   }, [glassId]);
 
+  const inCollection = has(glassId);
+
   const primaryImage = useMemo(() => {
     return glass?.images?.find((img) => img.isPrimary)?.url || glass?.images?.[0]?.url;
   }, [glass]);
 
-  async function toggleCollection() {
+  async function onToggle() {
     try {
       setSaving(true);
-      if (inCollection) {
-        await removeFromCollectionApi(glassId);
-        setInCollection(false);
-      } else {
-        await addToCollectionApi(glassId);
-        setInCollection(true);
-      }
+      setError(null);
+      await toggle(glassId);
+      // après toggle, le store refresh déjà, donc l’état est correct
     } catch (e: any) {
-      setError(e?.message || "Erreur");
+      setError(e?.message || "Erreur action collection");
     } finally {
       setSaving(false);
     }
@@ -100,7 +97,7 @@ export default function GlassDetailUserScreen() {
         <Button
           label={inCollection ? "Retirer de ma collection" : "Ajouter à ma collection"}
           variant={inCollection ? "secondary" : "primary"}
-          onPress={toggleCollection}
+          onPress={onToggle}
           disabled={saving}
         />
       </View>

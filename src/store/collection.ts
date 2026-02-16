@@ -1,38 +1,63 @@
-type CollectionState = {
-  glassIds: string[];
+import { create } from "zustand";
+import type { StateCreator } from "zustand";
+import { addToCollectionApi, listMyCollectionApi, removeFromCollectionApi } from "../api/collectionApi";
+
+export type CollectionRow = {
+  id: number;
+  userId: number;
+  glassId: number;
+  createdAt: string;
+  Glass: any;
 };
 
-let state: CollectionState = { glassIds: [] };
-let listeners: Array<(s: CollectionState) => void> = [];
+export type CollectionState = {
+  items: CollectionRow[];
+  loading: boolean;
+  error: string | null;
 
-function notify() {
-  listeners.forEach((l) => l(state));
-}
-
-export const collection = {
-  getState() {
-    return state;
-  },
-
-  subscribe(listener: (s: CollectionState) => void) {
-    listeners.push(listener);
-    return () => {
-      listeners = listeners.filter((l) => l !== listener);
-    };
-  },
-
-  add(glassId: string) {
-    if (state.glassIds.includes(glassId)) return;
-    state = { glassIds: [...state.glassIds, glassId] };
-    notify();
-  },
-
-  remove(glassId: string) {
-    state = { glassIds: state.glassIds.filter((id) => id !== glassId) };
-    notify();
-  },
-
-  has(glassId: string) {
-    return state.glassIds.includes(glassId);
-  },
+  clear: () => void;
+  refresh: () => Promise<void>;
+  has: (glassId: number) => boolean;
+  add: (glassId: number) => Promise<void>;
+  remove: (glassId: number) => Promise<void>;
+  toggle: (glassId: number) => Promise<void>;
 };
+
+const creator: StateCreator<CollectionState> = (set, get) => ({
+  items: [],
+  loading: false,
+  error: null,
+
+  clear: () => set({ items: [], loading: false, error: null }),
+
+  has: (glassId: number) => get().items.some((row: CollectionRow) => row.glassId === glassId),
+
+  refresh: async () => {
+    try {
+      set({ loading: true, error: null });
+      const res = await listMyCollectionApi();
+      set({ items: res.items as any, loading: false });
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : "Erreur de chargement collection";
+      set({ loading: false, error: msg });
+    }
+  },
+
+  add: async (glassId: number) => {
+    await addToCollectionApi(glassId);
+    await get().refresh();
+  },
+
+  remove: async (glassId: number) => {
+    await removeFromCollectionApi(glassId);
+    await get().refresh();
+  },
+
+  toggle: async (glassId: number) => {
+    const inCol = get().has(glassId);
+    if (inCol) await get().remove(glassId);
+    else await get().add(glassId);
+  },
+});
+
+export const useCollectionStore = create<CollectionState>(creator);

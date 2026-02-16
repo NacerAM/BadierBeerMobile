@@ -1,17 +1,14 @@
-import { useEffect, useState } from "react";
-import { collection } from "./collection";
+import { useCollectionStore } from "./collection";
 
 export function useCollection() {
-  const [glassIds, setGlassIds] = useState(collection.getState().glassIds);
+  const items = useCollectionStore((s) => s.items);
+  const loading = useCollectionStore((s) => s.loading);
+  const error = useCollectionStore((s) => s.error);
 
-  useEffect(() => {
-    return collection.subscribe((s) => setGlassIds(s.glassIds));
-  }, []);
+  const refresh = useCollectionStore((s) => s.refresh);
+  const has = useCollectionStore((s) => s.has);
+  const toggle = useCollectionStore((s) => s.toggle);
+  const clear = useCollectionStore((s) => s.clear);
 
-  return {
-    glassIds,
-    add: collection.add,
-    remove: collection.remove,
-    has: collection.has,
-  };
+  return { items, loading, error, refresh, has, toggle, clear };
 }
