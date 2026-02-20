@@ -1,62 +1,95 @@
 import React, { useState } from "react";
-import { View, Text, StyleSheet, Alert, ScrollView } from "react-native";
+import { Text, StyleSheet, ScrollView, Alert } from "react-native";
+import { router } from "expo-router";
 import Input from "../../src/components/Input";
 import Button from "../../src/components/Button";
-import { useProposals } from "../../src/store/useProposals";
+import { proposeGlassApi } from "../../src/api/proposalsApi";
 import { colors } from "../../src/theme/colors";
 import { spacing } from "../../src/theme/spacing";
 import { typography } from "../../src/theme/typography";
-import { router } from "expo-router";
 
-export default function ProposeGlassScreen() {
-  const { addProposal } = useProposals();
-
+export default function ProposeScreen() {
   const [name, setName] = useState("");
-  const [brand, setBrand] = useState("");
+  const [manufacturerName, setManufacturerName] = useState("");
   const [description, setDescription] = useState("");
+  const [imageUrl, setImageUrl] = useState(""); // simple pour V1
 
-  const [errors, setErrors] = useState<{ name?: string; brand?: string; description?: string }>({});
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  function onSubmit() {
-    const e: typeof errors = {};
-    if (!name.trim()) e.name = "Nom du verre requis";
-    if (!brand.trim()) e.brand = "Fabricant requis";
-    if (!description.trim()) e.description = "Description requise";
-    setErrors(e);
+  function validate() {
+    if (!name.trim()) return "Nom du verre requis";
+    if (!manufacturerName.trim()) return "Fabricant requis";
+    if (description.trim().length > 0 && description.trim().length < 5) return "Description trop courte";
+    if (imageUrl.trim().length > 0 && !imageUrl.trim().startsWith("http")) return "URL image invalide";
+    return null;
+  }
 
-    if (Object.keys(e).length !== 0) return;
+  async function onSubmit() {
+    const msg = validate();
+    if (msg) {
+      setError(msg);
+      return;
+    }
 
-    addProposal({ name, brand, description });
+    try {
+      setLoading(true);
+      setError(null);
 
-    Alert.alert("Envoyé ✅", "Votre proposition a été envoyée pour validation.");
-    setName("");
-    setBrand("");
-    setDescription("");
+      await proposeGlassApi({
+        name: name.trim(),
+        manufacturerName: manufacturerName.trim(),
+        description: description.trim() ? description.trim() : undefined,
+        imageUrls: imageUrl.trim() ? [imageUrl.trim()] : undefined,
+      });
 
-    router.push("/(user)/proposals" as any);
+      Alert.alert("Envoyé ✅", "Votre proposition a été envoyée pour validation.");
+      setName("");
+      setManufacturerName("");
+      setDescription("");
+      setImageUrl("");
+
+      router.push("/(user)/proposals" as any);
+    } catch (e: any) {
+      setError(e?.message || "Erreur lors de l’envoi");
+    } finally {
+      setLoading(false);
+    }
   }
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={{ paddingBottom: spacing.xl }}>
       <Text style={styles.title}>Proposer un verre</Text>
       <Text style={styles.subtitle}>
-        Complétez les informations. La proposition sera validée par un administrateur.
+        Remplissez les informations. La proposition sera examinée par un administrateur.
       </Text>
 
-      <Input label="Nom du verre" value={name} onChangeText={setName} error={errors.name} />
-      <Input label="Fabricant" value={brand} onChangeText={setBrand} error={errors.brand} />
+      {error ? <Text style={styles.error}>{error}</Text> : null}
+
+      <Input label="Nom du verre" value={name} onChangeText={setName} />
+      <Input label="Fabricant" value={manufacturerName} onChangeText={setManufacturerName} />
 
       <Input
-        label="Description"
+        label="Description (optionnel)"
         value={description}
         onChangeText={setDescription}
-        error={errors.description}
         multiline
         numberOfLines={4}
         style={{ minHeight: 90, textAlignVertical: "top" } as any}
       />
 
-      <Button label="Envoyer la proposition" onPress={onSubmit} />
+      <Input
+        label="URL image (optionnel)"
+        value={imageUrl}
+        onChangeText={setImageUrl}
+        autoCapitalize="none"
+      />
+
+      <Button
+        label={loading ? "Envoi..." : "Envoyer la proposition"}
+        onPress={onSubmit}
+        disabled={loading}
+      />
     </ScrollView>
   );
 }
@@ -65,4 +98,5 @@ const styles = StyleSheet.create({
   container: { flex: 1, padding: spacing.lg, backgroundColor: colors.bg },
   title: { fontSize: typography.h1, fontWeight: "800", color: colors.text, marginBottom: spacing.sm },
   subtitle: { color: colors.muted, marginBottom: spacing.lg },
+  error: { color: "#991B1B", fontWeight: "700", marginBottom: spacing.md },
 });
