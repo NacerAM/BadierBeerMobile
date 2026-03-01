@@ -1,6 +1,6 @@
 import { View, Text, StyleSheet } from "react-native";
-import Button from "../../src/components/Button";
-import { useAuth } from "../../src/store/useAuth";
+import Button from "../../../src/components/Button";
+import { useAuth } from "../../../src/store/useAuth";
 import { router } from "expo-router";
 
 export default function Profile() {

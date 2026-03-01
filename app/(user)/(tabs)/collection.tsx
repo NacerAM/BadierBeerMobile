@@ -1,10 +1,10 @@
 import React, { useCallback } from "react";
 import { View, Text, FlatList, ActivityIndicator, StyleSheet } from "react-native";
 import { useFocusEffect, router } from "expo-router";
-import { useCollection } from "../../src/store/useCollection";
-import { colors } from "../../src/theme/colors";
-import { spacing } from "../../src/theme/spacing";
-import { typography } from "../../src/theme/typography";
+import { useCollection } from "../../../src/store/useCollection";
+import { colors } from "../../../src/theme/colors";
+import { spacing } from "../../../src/theme/spacing";
+import { typography } from "../../../src/theme/typography";
 
 export default function CollectionScreen() {
   const { items, loading, error, refresh } = useCollection();

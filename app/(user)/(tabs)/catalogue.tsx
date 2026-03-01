@@ -1,9 +1,9 @@
 import React from "react";
 import { View, Text, StyleSheet, FlatList, Pressable } from "react-native";
 import { router } from "expo-router";
-import { colors } from "../../src/theme/colors";
-import { spacing } from "../../src/theme/spacing";
-import { typography } from "../../src/theme/typography";
+import { colors } from "../../../src/theme/colors";
+import { spacing } from "../../../src/theme/spacing";
+import { typography } from "../../../src/theme/typography";
 
 const MOCK_GLASSES = [
   { id: "1", name: "Chimay Trappistes", brand: "Chimay" },

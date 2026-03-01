@@ -1,15 +1,6 @@
-import { View, Text, StyleSheet } from "react-native";
+import { Redirect } from "expo-router";
 
-export default function HomeUser() {
-  return (
-    <View style={styles.container}>
-      <Text style={styles.title}>Accueil Utilisateur</Text>
-      <Text>Connecté ✅</Text>
-    </View>
-  );
+export default function UserIndex() {
+  // Force l’entrée dans le layout Tabs
+  return <Redirect href="/(user)/(tabs)" />;
 }
-
-const styles = StyleSheet.create({
-  container: { flex: 1, alignItems: "center", justifyContent: "center" },
-  title: { fontSize: 22, fontWeight: "700", marginBottom: 8 },
-});

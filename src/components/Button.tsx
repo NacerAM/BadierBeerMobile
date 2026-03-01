@@ -22,14 +22,20 @@ export default function Button({
     <Pressable
       onPress={onPress}
       disabled={disabled}
-      style={[
+      style={({ pressed }) => [
         styles.base,
         variant === "primary" ? styles.primary : styles.secondary,
+        pressed && !disabled && styles.pressed,
         disabled && styles.disabled,
         style,
       ]}
     >
-      <Text style={[styles.text, variant === "secondary" && styles.textSecondary]}>
+      <Text
+        style={[
+          styles.text,
+          variant === "secondary" && styles.textSecondary,
+        ]}
+      >
         {label}
       </Text>
     </Pressable>
@@ -38,27 +44,45 @@ export default function Button({
 
 const styles = StyleSheet.create({
   base: {
-    paddingVertical: spacing.sm + 2,
-    paddingHorizontal: spacing.md,
-    borderRadius: 12,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.lg,
+    borderRadius: 16,
     alignItems: "center",
     justifyContent: "center",
+
+    shadowColor: colors.shadow as any,
+    shadowOpacity: 0.25,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 6 },
+    elevation: 4,
   },
+
   primary: {
     backgroundColor: colors.primary,
   },
+
   secondary: {
     backgroundColor: "transparent",
-    borderWidth: 1,
-    borderColor: colors.primary,
+    borderWidth: 1.5,
+    borderColor: colors.primaryDark,
   },
+
   text: {
-    fontWeight: "600",
-    color: "#1A1A1A",
+    fontWeight: "800",
+    fontSize: 15,
+    color: "#2E1A0F",
+    letterSpacing: 0.3,
   },
+
   textSecondary: {
     color: colors.primaryDark,
   },
+
+  pressed: {
+    transform: [{ scale: 0.97 }],
+    shadowOpacity: 0.15,
+  },
+
   disabled: {
     opacity: 0.5,
   },

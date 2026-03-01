@@ -1,12 +1,12 @@
 import React, { useState } from "react";
 import { Text, StyleSheet, ScrollView, Alert } from "react-native";
 import { router } from "expo-router";
-import Input from "../../src/components/Input";
-import Button from "../../src/components/Button";
-import { proposeGlassApi } from "../../src/api/proposalsApi";
-import { colors } from "../../src/theme/colors";
-import { spacing } from "../../src/theme/spacing";
-import { typography } from "../../src/theme/typography";
+import Input from "../../../src/components/Input";
+import Button from "../../../src/components/Button";
+import { proposeGlassApi } from "../../../src/api/proposalsApi";
+import { colors } from "../../../src/theme/colors";
+import { spacing } from "../../../src/theme/spacing";
+import { typography } from "../../../src/theme/typography";
 
 export default function ProposeScreen() {
   const [name, setName] = useState("");

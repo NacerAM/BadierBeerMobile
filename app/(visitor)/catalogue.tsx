@@ -1,5 +1,13 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { View, Text, StyleSheet, FlatList, Pressable, TextInput, ActivityIndicator } from "react-native";
+import {
+  View,
+  Text,
+  StyleSheet,
+  FlatList,
+  Pressable,
+  TextInput,
+  ActivityIndicator,
+} from "react-native";
 import { router } from "expo-router";
 import { colors } from "../../src/theme/colors";
 import { spacing } from "../../src/theme/spacing";
@@ -34,7 +42,10 @@ export default function CataloguePublicScreen() {
     if (!query) return items;
     return items.filter((g) => {
       const brand = g.Manufacturer?.name || "";
-      return g.name.toLowerCase().includes(query) || brand.toLowerCase().includes(query);
+      return (
+        g.name.toLowerCase().includes(query) ||
+        brand.toLowerCase().includes(query)
+      );
     });
   }, [q, items]);
 
@@ -42,14 +53,17 @@ export default function CataloguePublicScreen() {
     <View style={styles.container}>
       <Text style={styles.title}>Catalogue public</Text>
 
-      <TextInput
-        value={q}
-        onChangeText={setQ}
-        placeholder="Rechercher un verre ou un fabricant…"
-        placeholderTextColor={colors.muted}
-        style={styles.search}
-        autoCapitalize="none"
-      />
+      <View style={styles.searchWrap}>
+        <Text style={styles.searchIcon}>⌕</Text>
+        <TextInput
+          value={q}
+          onChangeText={setQ}
+          placeholder="Rechercher un verre ou un fabricant…"
+          placeholderTextColor={colors.muted}
+          style={styles.search}
+          autoCapitalize="none"
+        />
+      </View>
 
       {loading ? (
         <View style={styles.center}>
@@ -70,7 +84,10 @@ export default function CataloguePublicScreen() {
           contentContainerStyle={styles.list}
           renderItem={({ item }) => (
             <Pressable
-              style={styles.card}
+              style={({ pressed }) => [
+                styles.card,
+                pressed && { transform: [{ scale: 0.98 }] },
+              ]}
               onPress={() =>
                 router.push({
                   pathname: "/(visitor)/glass/[id]",
@@ -78,17 +95,28 @@ export default function CataloguePublicScreen() {
                 } as any)
               }
             >
-              <View style={styles.cardTop}>
-                <Text style={styles.cardTitle}>{item.name}</Text>
+              {/* image placeholder */}
+              <View style={styles.cardImage}>
+                <Text style={styles.cardImageEmoji}>🍺</Text>
+
                 <View style={styles.badge}>
-                  <Text style={styles.badgeText}>VALIDÉ</Text>
+                  <Text style={styles.badgeText}>Validé</Text>
                 </View>
               </View>
 
-              <Text style={styles.cardSubtitle}>{item.Manufacturer?.name || "—"}</Text>
+              <Text style={styles.cardTitle} numberOfLines={1}>
+                {item.name}
+              </Text>
+              <Text style={styles.cardSubtitle} numberOfLines={1}>
+                {item.Manufacturer?.name || "—"}
+              </Text>
             </Pressable>
           )}
-          ListEmptyComponent={<Text style={styles.empty}>Aucun résultat.</Text>}
+          numColumns={2}
+          columnWrapperStyle={{ gap: spacing.md }}
+          ListEmptyComponent={
+            <Text style={styles.empty}>Aucun résultat.</Text>
+          }
         />
       )}
     </View>
@@ -99,51 +127,112 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     paddingTop: spacing.lg,
-    paddingHorizontal: spacing.md,
+    paddingHorizontal: spacing.lg,
     backgroundColor: colors.bg,
   },
+
   title: {
     fontSize: typography.h1,
-    fontWeight: "800",
+    fontWeight: "900",
     color: colors.text,
     marginBottom: spacing.md,
+    textAlign: "center",
   },
-  search: {
+
+  searchWrap: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.sm,
     borderWidth: 1,
     borderColor: colors.border,
     backgroundColor: colors.card,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
-    borderRadius: 12,
-    color: colors.text,
-    marginBottom: spacing.md,
+    borderRadius: 16,
+    marginBottom: spacing.lg,
+
+    shadowColor: colors.shadow as any,
+    shadowOpacity: 0.15,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 6 },
+    elevation: 2,
   },
-  center: { flex: 1, alignItems: "center", justifyContent: "center", gap: 10 },
+  searchIcon: {
+    color: colors.muted,
+    fontSize: 16,
+    fontWeight: "900",
+  },
+  search: {
+    flex: 1,
+    color: colors.text,
+    paddingVertical: 2,
+  },
+
+  center: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 10,
+  },
   centerText: { color: colors.muted },
-  errorText: { color: "#991B1B", fontWeight: "700", textAlign: "center" },
-  retry: { color: colors.primaryDark, fontWeight: "800" },
-  list: { gap: spacing.md, paddingBottom: spacing.xl },
+  errorText: { color: colors.dangerText, fontWeight: "800", textAlign: "center" },
+  retry: { color: colors.primaryDark, fontWeight: "900" },
+
+  list: {
+    gap: spacing.md,
+    paddingBottom: spacing.xl,
+  },
+
   card: {
+    flex: 1,
+    borderRadius: 18,
+    backgroundColor: colors.card,
     borderWidth: 1,
     borderColor: colors.border,
+    padding: spacing.sm,
+
+    shadowColor: colors.shadow as any,
+    shadowOpacity: 0.18,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 8 },
+    elevation: 3,
+  },
+
+  cardImage: {
+    height: 140,
     borderRadius: 14,
-    padding: spacing.md,
-    backgroundColor: colors.card,
-  },
-  cardTop: {
-    flexDirection: "row",
+    backgroundColor: colors.bg2,
+    borderWidth: 1,
+    borderColor: colors.border,
     alignItems: "center",
-    justifyContent: "space-between",
-    gap: spacing.sm,
+    justifyContent: "center",
+    marginBottom: spacing.sm,
+    overflow: "hidden",
   },
-  cardTitle: { fontSize: 16, fontWeight: "700", color: colors.text, flex: 1 },
-  cardSubtitle: { marginTop: 6, color: colors.muted },
+  cardImageEmoji: { fontSize: 34, color: colors.muted },
+
   badge: {
-    backgroundColor: "#E9D8A6",
+    position: "absolute",
+    left: spacing.sm,
+    bottom: spacing.sm,
+    backgroundColor: "#5B3A1E",
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 999,
   },
-  badgeText: { fontSize: 12, fontWeight: "800", color: colors.primaryDark },
-  empty: { marginTop: spacing.lg, textAlign: "center", color: colors.muted },
+  badgeText: { color: "#FFF", fontWeight: "900", fontSize: 12 },
+
+  cardTitle: {
+    fontSize: 15,
+    fontWeight: "900",
+    color: colors.text,
+    marginTop: 2,
+  },
+  cardSubtitle: { marginTop: 4, color: colors.muted, fontSize: 12 },
+
+  empty: {
+    marginTop: spacing.lg,
+    textAlign: "center",
+    color: colors.muted,
+  },
 });

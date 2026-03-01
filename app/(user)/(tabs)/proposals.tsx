@@ -1,10 +1,10 @@
 import React, { useCallback, useState } from "react";
 import { View, Text, StyleSheet, FlatList, ActivityIndicator } from "react-native";
 import { useFocusEffect } from "@react-navigation/native";
-import { listMyProposalsApi } from "../../src/api/proposalsApi";
-import { colors } from "../../src/theme/colors";
-import { spacing } from "../../src/theme/spacing";
-import { typography } from "../../src/theme/typography";
+import { listMyProposalsApi } from "../../../src/api/proposalsApi";
+import { colors } from "../../../src/theme/colors";
+import { spacing } from "../../../src/theme/spacing";
+import { typography } from "../../../src/theme/typography";
 
 function badge(status?: string) {
   if (status === "VALIDE") return { bg: "#DCFCE7", text: "#166534", label: "Validé" };

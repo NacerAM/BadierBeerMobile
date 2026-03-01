@@ -1,10 +1,10 @@
 import React from "react";
 import { View, Text, StyleSheet, Pressable } from "react-native";
 import { router } from "expo-router";
-import { useMessages } from "../../src/store/useMessages";
-import { colors } from "../../src/theme/colors";
-import { spacing } from "../../src/theme/spacing";
-import { typography } from "../../src/theme/typography";
+import { useMessages } from "../../../src/store/useMessages";
+import { colors } from "../../../src/theme/colors";
+import { spacing } from "../../../src/theme/spacing";
+import { typography } from "../../../src/theme/typography";
 
 export default function MessagesScreen() {
   const { conversations } = useMessages();
