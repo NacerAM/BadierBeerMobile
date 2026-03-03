@@ -98,5 +98,5 @@ const styles = StyleSheet.create({
   container: { flex: 1, padding: spacing.lg, backgroundColor: colors.bg },
   title: { fontSize: typography.h1, fontWeight: "800", color: colors.text, marginBottom: spacing.sm },
   subtitle: { color: colors.muted, marginBottom: spacing.lg },
-  error: { color: "#991B1B", fontWeight: "700", marginBottom: spacing.md },
+  error: { color: colors.dangerText, fontWeight: "700", marginBottom: spacing.md },
 });

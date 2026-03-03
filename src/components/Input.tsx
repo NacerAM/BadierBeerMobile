@@ -34,6 +34,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     color: colors.text,
   },
-  inputError: { borderColor: colors.danger },
-  error: { marginTop: spacing.xs, color: colors.danger, fontSize: 12 },
+  inputError: { borderColor: colors.dangerText },
+  error: { marginTop: spacing.xs, color: colors.dangerText, fontSize: 12 },
 });
+

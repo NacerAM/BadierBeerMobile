@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+﻿import React, { useEffect, useMemo, useState } from "react";
 import {
   View,
   Text,
@@ -13,7 +13,7 @@ import Button from "../../../src/components/Button";
 import { colors } from "../../../src/theme/colors";
 import { spacing } from "../../../src/theme/spacing";
 import { typography } from "../../../src/theme/typography";
-import { getGlassApi, Glass } from "../../../src/api/glassesApi";
+import { getGlassApi, Glass, rateGlassApi } from "../../../src/api/glassesApi";
 import { useCollection } from "../../../src/store/useCollection";
 
 export default function GlassDetailUserScreen() {
@@ -26,13 +26,14 @@ export default function GlassDetailUserScreen() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [myRating, setMyRating] = useState<number | null>(null);
 
   async function load() {
     try {
       setLoading(true);
       setError(null);
 
-      await refresh(); // garantit état collection
+      await refresh();
       const g = await getGlassApi(glassId);
       setGlass(g);
     } catch (e: any) {
@@ -67,6 +68,25 @@ export default function GlassDetailUserScreen() {
     }
   }
 
+  async function onRate(n: number) {
+    try {
+      const r = await rateGlassApi(glassId, n);
+      setMyRating(r.myRating);
+      setGlass((prev) => (prev ? { ...prev, avgRating: r.avgRating, ratingsCount: r.ratingsCount } : prev));
+    } catch (e: any) {
+      setError(e?.message || "Échec de la notation");
+    }
+  }
+
+  function Stars({ value, size = 16, tint = colors.primaryDark }: { value: number; size?: number; tint?: string }) {
+    const full = Math.round(value);
+    return (
+      <Text style={{ fontSize: size, color: tint }}>
+        {Array.from({ length: 5 }).map((_, i) => (i < full ? "★" : "☆")).join("")}
+      </Text>
+    );
+  }
+
   if (loading) {
     return (
       <View style={styles.center}>
@@ -80,9 +100,7 @@ export default function GlassDetailUserScreen() {
     return (
       <View style={styles.center}>
         <Text style={styles.errorText}>{error || "Verre introuvable"}</Text>
-        <Text style={styles.retry} onPress={load}>
-          Réessayer
-        </Text>
+        <Text style={styles.retry} onPress={load}>Réessayer</Text>
       </View>
     );
   }
@@ -94,9 +112,7 @@ export default function GlassDetailUserScreen() {
         <Pressable onPress={() => router.back()} style={styles.backBtn} hitSlop={10}>
           <Text style={styles.backText}>‹</Text>
         </Pressable>
-        <Text style={styles.topTitle} numberOfLines={1}>
-          Détail du verre
-        </Text>
+        <Text style={styles.topTitle} numberOfLines={1}>Détail du verre</Text>
         <View style={{ width: 40 }} />
       </View>
 
@@ -110,16 +126,26 @@ export default function GlassDetailUserScreen() {
             <Text style={{ color: colors.muted }}>Aucune image</Text>
           </View>
         )}
-
-        <View style={styles.badge}>
-          <Text style={styles.badgeText}>Validé</Text>
-        </View>
+        <View style={styles.badge}><Text style={styles.badgeText}>Validé</Text></View>
       </View>
 
       {/* Paper details */}
       <View style={styles.paper}>
         <Text style={styles.title}>{glass.name}</Text>
         <Text style={styles.brand}>{glass.Manufacturer?.name || "—"}</Text>
+
+        {/* Rating section */}
+        <View style={[styles.section, { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }]}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+            <Stars value={Number(glass.avgRating || 0)} />
+            <Text style={{ color: colors.muted, fontSize: 12 }}>({glass.ratingsCount || 0})</Text>
+          </View>
+          <View style={{ flexDirection: 'row', gap: 6 }}>
+            {[1,2,3,4,5].map((n) => (
+              <Text key={n} onPress={() => onRate(n)} style={{ color: (myRating || 0) >= n ? colors.primaryDark : colors.text, fontSize: 18 }}>★</Text>
+            ))}
+          </View>
+        </View>
 
         {glass.description ? (
           <View style={styles.section}>
@@ -131,9 +157,7 @@ export default function GlassDetailUserScreen() {
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Collection</Text>
           <Text style={styles.muted}>
-            {inCollection
-              ? "Ce verre est déjà dans votre collection."
-              : "Ajoutez ce verre à votre collection personnelle."}
+            {inCollection ? "Ce verre est déjà dans votre collection." : "Ajoutez ce verre à votre collection personnelle."}
           </Text>
         </View>
 
@@ -207,12 +231,12 @@ const styles = StyleSheet.create({
     position: "absolute",
     left: spacing.md,
     bottom: spacing.md,
-    backgroundColor: "#5B3A1E",
+    backgroundColor: colors.badgeBg,
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 999,
   },
-  badgeText: { color: "#FFF", fontWeight: "900", fontSize: 12 },
+  badgeText: { color: colors.badgeText, fontWeight: "900", fontSize: 12 },
 
   paper: {
     marginTop: spacing.lg,

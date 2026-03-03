@@ -1,26 +1,21 @@
-import React, { useEffect, useMemo, useState } from "react";
-import {
-  View,
-  Text,
-  StyleSheet,
-  ActivityIndicator,
-  Image,
-  ScrollView,
-  Pressable,
-} from "react-native";
+﻿import React, { useEffect, useMemo, useState } from "react";
+import { View, Text, StyleSheet, ActivityIndicator, Image, ScrollView, Pressable } from "react-native";
 import { useLocalSearchParams, router } from "expo-router";
 import Button from "../../../src/components/Button";
 import { colors } from "../../../src/theme/colors";
 import { spacing } from "../../../src/theme/spacing";
 import { typography } from "../../../src/theme/typography";
-import { getGlassApi, Glass } from "../../../src/api/glassesApi";
+import { getGlassApi, Glass, rateGlassApi } from "../../../src/api/glassesApi";
+import { useAuth } from "../../../src/store/useAuth";
 
 export default function GlassDetailVisitorScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
+  const { isLoggedIn } = useAuth();
 
   const [glass, setGlass] = useState<Glass | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [myRating, setMyRating] = useState<number | null>(null);
 
   async function load() {
     try {
@@ -35,16 +30,28 @@ export default function GlassDetailVisitorScreen() {
     }
   }
 
-  useEffect(() => {
-    load();
-  }, [id]);
+  useEffect(() => { load(); }, [id]);
 
-  const primaryImage = useMemo(() => {
-    return (
-      glass?.images?.find((img) => img.isPrimary)?.url ||
-      glass?.images?.[0]?.url
-    );
-  }, [glass]);
+  const primaryImage = useMemo(() => (
+    glass?.images?.find((img) => img.isPrimary)?.url || glass?.images?.[0]?.url
+  ), [glass]);
+
+  async function onRate(n: number) {
+    if (!isLoggedIn) {
+      router.push({ pathname: "/(visitor)/login", params: { redirect: `/(visitor)/glass/${id}` } } as any);
+      return;
+    }
+    try {
+      const r = await rateGlassApi(Number(id), n);
+      setMyRating(r.myRating);
+      setGlass((prev) => (prev ? { ...prev, avgRating: r.avgRating, ratingsCount: r.ratingsCount } : prev));
+    } catch {}
+  }
+
+  function Stars({ value, size = 16, tint = colors.primaryDark }: { value: number; size?: number; tint?: string }) {
+    const full = Math.round(value);
+    return <Text style={{ fontSize: size, color: tint }}>{Array.from({ length: 5 }).map((_, i) => (i < full ? '★' : '☆')).join('')}</Text>;
+  }
 
   if (loading) {
     return (
@@ -59,9 +66,7 @@ export default function GlassDetailVisitorScreen() {
     return (
       <View style={styles.center}>
         <Text style={styles.errorText}>{error || "Verre introuvable"}</Text>
-        <Text style={styles.retry} onPress={load}>
-          Réessayer
-        </Text>
+        <Text style={styles.retry} onPress={load}>Réessayer</Text>
       </View>
     );
   }
@@ -73,9 +78,7 @@ export default function GlassDetailVisitorScreen() {
         <Pressable onPress={() => router.back()} style={styles.backBtn} hitSlop={10}>
           <Text style={styles.backText}>‹</Text>
         </Pressable>
-        <Text style={styles.topTitle} numberOfLines={1}>
-          Détail du verre
-        </Text>
+        <Text style={styles.topTitle} numberOfLines={1}>Détail du verre</Text>
         <View style={{ width: 40 }} />
       </View>
 
@@ -89,16 +92,26 @@ export default function GlassDetailVisitorScreen() {
             <Text style={{ color: colors.muted }}>Aucune image</Text>
           </View>
         )}
-
-        <View style={styles.badge}>
-          <Text style={styles.badgeText}>Validé</Text>
-        </View>
+        <View style={styles.badge}><Text style={styles.badgeText}>Validé</Text></View>
       </View>
 
       {/* Paper details */}
       <View style={styles.paper}>
         <Text style={styles.title}>{glass.name}</Text>
-        <Text style={styles.brand}>{glass.Manufacturer?.name || "—"}</Text>
+        <Text style={styles.brand}>{glass.Manufacturer?.name || '—'}</Text>
+
+        {/* Rating section */}
+        <View style={[styles.section, { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }]}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+            <Stars value={Number(glass.avgRating || 0)} />
+            <Text style={{ color: colors.muted, fontSize: 12 }}>({glass.ratingsCount || 0})</Text>
+          </View>
+          <View style={{ flexDirection: 'row', gap: 6 }}>
+            {[1,2,3,4,5].map((n) => (
+              <Text key={n} onPress={() => onRate(n)} style={{ color: (myRating || 0) >= n ? colors.primaryDark : colors.text, fontSize: 18 }}>★</Text>
+            ))}
+          </View>
+        </View>
 
         {glass.description ? (
           <View style={styles.section}>
@@ -109,24 +122,15 @@ export default function GlassDetailVisitorScreen() {
 
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Accès</Text>
-          <Text style={styles.muted}>
-            Connectez-vous pour ajouter ce verre à votre collection et proposer de nouveaux verres.
-          </Text>
+          <Text style={styles.muted}>Connectez-vous pour ajouter ce verre à votre collection et proposer de nouveaux verres.</Text>
         </View>
 
         <View style={{ marginTop: spacing.lg }}>
-          <Button
-            label="Se connecter pour ajouter à ma collection"
-            onPress={() => router.push("/(visitor)/login" as any)}
-          />
+          <Button label="Se connecter pour ajouter à ma collection" onPress={() => router.push("/(visitor)/login" as any)} />
         </View>
 
         <View style={{ marginTop: spacing.sm }}>
-          <Button
-            label="Créer un compte"
-            variant="secondary"
-            onPress={() => router.push("/(visitor)/register" as any)}
-          />
+          <Button label="Créer un compte" variant="secondary" onPress={() => router.push("/(visitor)/register" as any)} />
         </View>
       </View>
     </ScrollView>
@@ -177,56 +181,24 @@ const styles = StyleSheet.create({
     position: "relative",
   },
   image: { width: "100%", height: 260, backgroundColor: colors.card },
-  imagePlaceholder: {
-    height: 260,
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 6,
-    backgroundColor: colors.bg2,
-  },
+  imagePlaceholder: { height: 260, alignItems: 'center', justifyContent: 'center', gap: 6, backgroundColor: colors.bg2 },
   imageEmoji: { fontSize: 44 },
 
-  badge: {
-    position: "absolute",
-    left: spacing.md,
-    bottom: spacing.md,
-    backgroundColor: "#5B3A1E",
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 999,
-  },
-  badgeText: { color: "#FFF", fontWeight: "900", fontSize: 12 },
+  badge: { position: 'absolute', left: spacing.md, bottom: spacing.md, backgroundColor: colors.badgeBg, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 999 },
+  badgeText: { color: colors.badgeText, fontWeight: '900', fontSize: 12 },
 
-  paper: {
-    marginTop: spacing.lg,
-    marginHorizontal: spacing.lg,
-    padding: spacing.lg,
-    borderRadius: 18,
-    backgroundColor: colors.card,
-    borderWidth: 1,
-    borderColor: colors.border,
-    shadowColor: colors.shadow as any,
-    shadowOpacity: 0.14,
-    shadowRadius: 12,
-    shadowOffset: { width: 0, height: 8 },
-    elevation: 2,
-  },
+  paper: { marginTop: spacing.lg, marginHorizontal: spacing.lg, padding: spacing.lg, borderRadius: 18, backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border, shadowColor: colors.shadow as any, shadowOpacity: 0.14, shadowRadius: 12, shadowOffset: { width: 0, height: 8 }, elevation: 2 },
 
-  title: {
-    fontSize: 22,
-    fontWeight: "900",
-    color: colors.text,
-    textAlign: "center",
-  },
-  brand: { marginTop: spacing.xs, color: colors.muted, textAlign: "center", fontWeight: "700" },
+  title: { fontSize: 22, fontWeight: '900', color: colors.text, textAlign: 'center' },
+  brand: { marginTop: spacing.xs, color: colors.muted, textAlign: 'center', fontWeight: '700' },
 
   section: { marginTop: spacing.lg },
-  sectionTitle: { fontSize: 14, fontWeight: "900", color: colors.text, marginBottom: spacing.xs },
+  sectionTitle: { fontSize: 14, fontWeight: '900', color: colors.text, marginBottom: spacing.xs },
   description: { color: colors.text, lineHeight: 20 },
   muted: { color: colors.muted, lineHeight: 20 },
 
-  center: { flex: 1, alignItems: "center", justifyContent: "center", gap: 10, padding: spacing.lg },
+  center: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 10, padding: spacing.lg },
   centerText: { color: colors.muted },
-  errorText: { color: colors.dangerText, fontWeight: "900", textAlign: "center" },
-  retry: { color: colors.primaryDark, fontWeight: "900" },
+  errorText: { color: colors.dangerText, fontWeight: '900', textAlign: 'center' },
+  retry: { color: colors.primaryDark, fontWeight: '900' },
 });

@@ -1,10 +1,30 @@
-import { apiRequest } from "./client";
+﻿import { apiRequest } from "./client";
 
 export type LoginResponse = {
   token: string;
-  user: { id: number; username: string; email: string; role: string };
+  user: { id: number; username: string; email: string; role: string; avatarUrl?: string | null };
 };
 
 export async function loginApi(email: string, password: string) {
   return apiRequest<LoginResponse>("/api/auth/login", "POST", { email, password });
 }
+
+export type RegisterResponse = {
+  id: number;
+  message: string;
+  previewUrl?: string;
+};
+
+export async function registerApi(username: string, email: string, password: string) {
+  return apiRequest<RegisterResponse>("/api/auth/register", "POST", { username, email, password });
+}
+export async function resendVerificationApi(email: string) {
+  return apiRequest<{ message: string; previewUrl?: string }>("/api/auth/resend-verification", "POST", { email });
+}
+export async function forgotPasswordApi(email: string) {
+  return apiRequest<{ message: string; previewUrl?: string }>("/api/auth/forgot-password", "POST", { email });
+}
+export async function updateMeApi(payload: { username?: string; avatarUrl?: string | null }) {
+  return apiRequest<{ id: number; username: string; email: string; role: string; avatarUrl?: string | null }>("/api/auth/me", "PATCH", payload);
+}
+

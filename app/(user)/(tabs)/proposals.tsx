@@ -7,9 +7,9 @@ import { spacing } from "../../../src/theme/spacing";
 import { typography } from "../../../src/theme/typography";
 
 function badge(status?: string) {
-  if (status === "VALIDE") return { bg: "#DCFCE7", text: "#166534", label: "Validé" };
-  if (status === "REJETE") return { bg: "#FEE2E2", text: "#991B1B", label: "Rejeté" };
-  return { bg: "#FEF3C7", text: "#92400E", label: "En attente" };
+  if (status === "VALIDE") return { bg: colors.successBg, text: colors.successText, label: "Validé" };
+  if (status === "REJETE") return { bg: colors.dangerBg, text: colors.dangerText, label: "Rejeté" };
+  return { bg: colors.warningBg, text: colors.warningText, label: "En attente" };
 }
 
 export default function ProposalsScreen() {
@@ -91,7 +91,7 @@ const styles = StyleSheet.create({
 
   center: { flex: 1, alignItems: "center", justifyContent: "center", gap: 10, padding: spacing.lg },
   muted: { color: colors.muted, textAlign: "center" },
-  error: { color: "#991B1B", fontWeight: "700", textAlign: "center" },
+  error: { color: colors.dangerText, fontWeight: "700", textAlign: "center" },
   retry: { color: colors.primaryDark, fontWeight: "800" },
 
   card: { borderWidth: 1, borderColor: colors.border, borderRadius: 14, padding: spacing.md, backgroundColor: colors.card },
@@ -102,5 +102,7 @@ const styles = StyleSheet.create({
 
   badge: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 999 },
   badgeText: { fontSize: 12, fontWeight: "800" },
-  reject: { marginTop: 8, color: "#991B1B", fontWeight: "800" },
+  reject: { marginTop: 8, color: colors.dangerText, fontWeight: "800" },
 });
+
+

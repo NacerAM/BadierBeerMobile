@@ -24,4 +24,7 @@ export const colors = {
   warningText: "#8A5A0A",
   dangerBg: "#FDE2E2",
   dangerText: "#991B1B",
+  badgeBg: "#5B3A1E",
+  badgeText: "#FFFFFF",
 };
+

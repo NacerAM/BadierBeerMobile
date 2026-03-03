@@ -84,7 +84,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.border,
   },
-  bubbleUser: { alignSelf: "flex-end", backgroundColor: "#F1E3C2" },
+  bubbleUser: { alignSelf: "flex-end", backgroundColor: colors.primarySoft },
   bubbleAdmin: { alignSelf: "flex-start", backgroundColor: colors.card },
   bubbleText: { color: colors.text },
 
@@ -100,3 +100,4 @@ const styles = StyleSheet.create({
     color: colors.text,
   },
 });
+

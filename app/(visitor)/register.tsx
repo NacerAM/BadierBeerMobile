@@ -1,10 +1,12 @@
 import React, { useState } from "react";
-import { View, Text, StyleSheet } from "react-native";
+import { View, Text, StyleSheet, Alert, Linking } from "react-native";
+import { router } from "expo-router";
 import { colors } from "../../src/theme/colors";
 import { spacing } from "../../src/theme/spacing";
 import { typography } from "../../src/theme/typography";
 import Input from "../../src/components/Input";
 import Button from "../../src/components/Button";
+import { registerApi, RegisterResponse } from "../../src/api/authApi";
 
 export default function RegisterScreen() {
   const [username, setUsername] = useState("");
@@ -14,17 +16,27 @@ export default function RegisterScreen() {
 
   const [errors, setErrors] = useState<{ username?: string; email?: string; password?: string; confirm?: string }>({});
 
-  function onSubmit() {
+  async function onSubmit() {
     const e: typeof errors = {};
-    if (!username.trim()) e.username = "Nom dâ€™utilisateur requis";
+    if (!username.trim()) e.username = "Nom d’utilisateur requis";
     if (!email.trim()) e.email = "Email requis";
     if (!password.trim()) e.password = "Mot de passe requis";
     if (confirm !== password) e.confirm = "Les mots de passe ne correspondent pas";
     setErrors(e);
 
     if (Object.keys(e).length === 0) {
-      // TODO: appel API register
-      console.log("REGISTER", { username, email, password });
+      try {
+        const res: RegisterResponse = await registerApi(username.trim(), email.trim(), password.trim());
+        const buttons = [] as { text: string; onPress: () => void }[];
+        if (res?.previewUrl) {
+          buttons.push({ text: "Voir l’email (aperçu)", onPress: () => Linking.openURL(res.previewUrl!) });
+        }
+        buttons.push({ text: "Se connecter", onPress: () => router.replace("/(visitor)/login" as any) });
+        Alert.alert("Compte créé", res?.message || "Votre compte a été créé. Vérifiez votre email.", buttons);
+      } catch (err: any) {
+        const msg = (err?.data?.issues?.[0]?.message) || err?.message || "Échec de l’inscription";
+        Alert.alert("Erreur", msg);
+      }
     }
   }
 
@@ -32,10 +44,10 @@ export default function RegisterScreen() {
     <View style={styles.container}>
       <Text style={styles.title}>Inscription</Text>
       <Text style={styles.subtitle}>
-        Un email de vÃ©rification sera envoyÃ© aprÃ¨s crÃ©ation du compte.
+        Un email de vérification sera envoyé après création du compte.
       </Text>
 
-      <Input label="Nom dâ€™utilisateur" value={username} onChangeText={setUsername} error={errors.username} />
+      <Input label="Nom d’utilisateur" value={username} onChangeText={setUsername} error={errors.username} />
       <Input
         label="Email"
         value={email}
@@ -47,7 +59,7 @@ export default function RegisterScreen() {
       <Input label="Mot de passe" value={password} onChangeText={setPassword} secureTextEntry error={errors.password} />
       <Input label="Confirmer le mot de passe" value={confirm} onChangeText={setConfirm} secureTextEntry error={errors.confirm} />
 
-      <Button label="CrÃ©er mon compte" onPress={onSubmit} />
+      <Button label="Créer mon compte" onPress={onSubmit} />
     </View>
   );
 }

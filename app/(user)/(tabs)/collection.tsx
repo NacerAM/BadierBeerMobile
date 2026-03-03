@@ -67,7 +67,7 @@ const styles = StyleSheet.create({
 
   center: { flex: 1, alignItems: "center", justifyContent: "center", gap: 10 },
   muted: { color: colors.muted, textAlign: "center" },
-  error: { color: "#991B1B", fontWeight: "700", textAlign: "center" },
+  error: { color: colors.dangerText, fontWeight: "700", textAlign: "center" },
   retry: { color: colors.primaryDark, fontWeight: "800" },
 
   row: {
@@ -82,3 +82,4 @@ const styles = StyleSheet.create({
   rowSub: { marginTop: 4, color: colors.muted },
   link: { marginTop: 10, color: colors.primaryDark, fontWeight: "800" },
 });
+

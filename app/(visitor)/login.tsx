@@ -1,23 +1,22 @@
 import React, { useState } from "react";
-import { View, Text, StyleSheet } from "react-native";
-import { Link, router } from "expo-router";
+import { View, Text, StyleSheet, Alert } from "react-native";
+import { Link, router, useLocalSearchParams } from "expo-router";
 import { colors } from "../../src/theme/colors";
 import { spacing } from "../../src/theme/spacing";
 import { typography } from "../../src/theme/typography";
 import Input from "../../src/components/Input";
 import Button from "../../src/components/Button";
 import { useAuth } from "../../src/store/useAuth";
-import { loginApi } from "../../src/api/authApi";
+import { loginApi, resendVerificationApi } from "../../src/api/authApi";
 
 export default function LoginScreen() {
+  const { redirect } = useLocalSearchParams<{ redirect?: string }>();
   const { login } = useAuth();
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
 
-  const [errors, setErrors] = useState<{ email?: string; password?: string }>(
-    {}
-  );
+  const [errors, setErrors] = useState<{ email?: string; password?: string }>({});
 
   async function onSubmit() {
     const e: typeof errors = {};
@@ -26,11 +25,41 @@ export default function LoginScreen() {
     setErrors(e);
 
     if (Object.keys(e).length === 0) {
-      // âœ… Simulation de login (plus tard : appel API)
-      const res = await loginApi(email, password);
-      await login(res.token);
-      router.replace("/(user)/" as any);
-
+      try {
+        const res = await loginApi(email, password);
+        await login({ token: res.token, user: res.user });
+        if (redirect) { router.replace(redirect as any); } else { router.replace("/(user)/" as any); }
+      } catch (err: any) {
+        const msg = err?.message || "Échec de la connexion";
+        // Si compte non actif, proposer renvoi d'email
+        if (err?.status === 403 && email.trim()) {
+          Alert.alert(
+            "Compte non actif",
+            msg,
+            [
+              { text: "Annuler" },
+              {
+                text: "Renvoyer l'email",
+                onPress: async () => {
+                  try {
+                    const r = await resendVerificationApi(email.trim());
+                    const opts: any[] = [{ text: "OK" }];
+                    if (r?.previewUrl) {
+                      const { Linking } = require("react-native");
+                      opts.unshift({ text: "Voir l’email", onPress: () => Linking.openURL(r.previewUrl as any) });
+                    }
+                    Alert.alert("Envoyé", r?.message || "Email renvoyé.", opts);
+                  } catch (e2: any) {
+                    Alert.alert("Erreur", e2?.message || "Échec de renvoi");
+                  }
+                },
+              },
+            ]
+          );
+        } else {
+          Alert.alert("Erreur", msg);
+        }
+      }
     }
   }
 
@@ -59,10 +88,10 @@ export default function LoginScreen() {
 
       <View style={styles.links}>
         <Link href={"/(visitor)/forgot-password" as any} style={styles.link}>
-          Mot de passe oubliÃ© ?
+          Mot de passe oublié ?
         </Link>
         <Link href={"/(visitor)/register" as any} style={styles.link}>
-          CrÃ©er un compte
+          Créer un compte
         </Link>
       </View>
     </View>
@@ -80,3 +109,5 @@ const styles = StyleSheet.create({
   links: { marginTop: spacing.lg, gap: spacing.sm },
   link: { color: colors.primaryDark, fontWeight: "600" },
 });
+
+
