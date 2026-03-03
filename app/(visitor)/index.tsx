@@ -4,7 +4,7 @@ import { Link, router } from "expo-router";
 import { colors } from "../../src/theme/colors";
 import { spacing } from "../../src/theme/spacing";
 import { typography } from "../../src/theme/typography";
-import Button from "../../src/components/Button";
+import Button from "../../src/components/Button";\nimport Ionicons from "@expo/vector-icons/Ionicons";
 import { useAuth } from "../../src/store/useAuth";
 import { healthApi } from "../../src/api/healthApi";
 import { listGlassesApi, Glass } from "../../src/api/glassesApi";
@@ -40,13 +40,11 @@ export default function HomeVisitorScreen() {
           onPress={() => (isLoggedIn ? router.push("/(user)/(tabs)/profile" as any) : router.push("/(visitor)/login"))}
           style={styles.headerIcon}
           hitSlop={10}
-        >
-          {user?.avatarUrl ? (
+        >          {user?.avatarUrl ? (
             <Image source={{ uri: (user as any).avatarUrl }} style={styles.headerAvatar} />
           ) : (
-            <Text style={styles.headerIconText}>🙂</Text>
-          )}
-        </Pressable>
+            <Ionicons name="person-circle" color={colors.text as any} size={24} />
+          )}</Pressable>
       </View>
 
       {/* Hero image */}
@@ -205,3 +203,5 @@ const styles = StyleSheet.create({
   cardTitle: { fontWeight: "900", color: colors.text, marginTop: 6 },
   cardSub: { color: colors.muted, marginTop: 2, fontSize: 12 },
 });
+
+
