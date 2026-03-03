@@ -1,6 +1,7 @@
-import React, { useState } from "react";
-import { View, Text, StyleSheet, Alert, Linking } from "react-native";
+ï»¿import React, { useState } from "react";
+import { View, Text, StyleSheet, Alert, Linking, Pressable } from "react-native";
 import { router } from "expo-router";
+import Ionicons from "@expo/vector-icons/Ionicons";
 import { colors } from "../../src/theme/colors";
 import { spacing } from "../../src/theme/spacing";
 import { typography } from "../../src/theme/typography";
@@ -13,12 +14,11 @@ export default function RegisterScreen() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
-
   const [errors, setErrors] = useState<{ username?: string; email?: string; password?: string; confirm?: string }>({});
 
   async function onSubmit() {
     const e: typeof errors = {};
-    if (!username.trim()) e.username = "Nom d’utilisateur requis";
+    if (!username.trim()) e.username = "Nom dâ€™utilisateur requis";
     if (!email.trim()) e.email = "Email requis";
     if (!password.trim()) e.password = "Mot de passe requis";
     if (confirm !== password) e.confirm = "Les mots de passe ne correspondent pas";
@@ -29,12 +29,12 @@ export default function RegisterScreen() {
         const res: RegisterResponse = await registerApi(username.trim(), email.trim(), password.trim());
         const buttons = [] as { text: string; onPress: () => void }[];
         if (res?.previewUrl) {
-          buttons.push({ text: "Voir l’email (aperçu)", onPress: () => Linking.openURL(res.previewUrl!) });
+          buttons.push({ text: "Voir lâ€™email (aperÃ§u)", onPress: () => Linking.openURL(res.previewUrl!) });
         }
         buttons.push({ text: "Se connecter", onPress: () => router.replace("/(visitor)/login" as any) });
-        Alert.alert("Compte créé", res?.message || "Votre compte a été créé. Vérifiez votre email.", buttons);
+        Alert.alert("Compte crÃ©Ã©", res?.message || "Votre compte a Ã©tÃ© crÃ©Ã©. VÃ©rifiez votre email.", buttons);
       } catch (err: any) {
-        const msg = (err?.data?.issues?.[0]?.message) || err?.message || "Échec de l’inscription";
+        const msg = (err?.data?.issues?.[0]?.message) || err?.message || "Ã‰chec de lâ€™inscription";
         Alert.alert("Erreur", msg);
       }
     }
@@ -43,29 +43,34 @@ export default function RegisterScreen() {
   return (
     <View style={styles.container}>
       <Text style={styles.title}>Inscription</Text>
-      <Text style={styles.subtitle}>
-        Un email de vérification sera envoyé après création du compte.
-      </Text>
+      <Text style={styles.subtitle}>Un email de vÃ©rification sera envoyÃ© aprÃ¨s crÃ©ation du compte.</Text>
 
-      <Input label="Nom d’utilisateur" value={username} onChangeText={setUsername} error={errors.username} />
-      <Input
-        label="Email"
-        value={email}
-        onChangeText={setEmail}
-        keyboardType="email-address"
-        autoCapitalize="none"
-        error={errors.email}
-      />
+      <Input label="Nom dâ€™utilisateur" value={username} onChangeText={setUsername} error={errors.username} />
+      <Input label="Email" value={email} onChangeText={setEmail} keyboardType="email-address" autoCapitalize="none" error={errors.email} />
       <Input label="Mot de passe" value={password} onChangeText={setPassword} secureTextEntry error={errors.password} />
       <Input label="Confirmer le mot de passe" value={confirm} onChangeText={setConfirm} secureTextEntry error={errors.confirm} />
 
-      <Button label="Créer mon compte" onPress={onSubmit} />
+      <Button label="CrÃ©er mon compte" onPress={onSubmit} />
+
+      <View style={styles.bottomBar}>
+        <Pressable style={styles.bottomItem} onPress={() => router.replace('/(visitor)/' as any)}>
+          <Ionicons name="home" size={22} color={colors.text as any} />
+          <Text style={styles.bottomLabel}>Accueil</Text>
+        </Pressable>
+        <Pressable style={styles.bottomItem} onPress={() => router.push('/(visitor)/explore' as any)}>
+          <Ionicons name="compass" size={22} color={colors.text as any} />
+          <Text style={styles.bottomLabel}>Explorer</Text>
+        </Pressable>
+      </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1, padding: spacing.lg, backgroundColor: colors.bg },
-  title: { fontSize: typography.h1, fontWeight: "700", marginBottom: spacing.sm, color: colors.text },
+  title: { fontSize: typography.h1, fontWeight: '700', marginBottom: spacing.sm, color: colors.text },
   subtitle: { color: colors.muted, marginBottom: spacing.lg },
+  bottomBar: { position: 'absolute', left: 0, right: 0, bottom: 0, height: 64, backgroundColor: colors.card, borderTopWidth: 1, borderTopColor: colors.border, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-evenly', paddingBottom: 6 },
+  bottomItem: { alignItems: 'center' },
+  bottomLabel: { color: colors.text, fontWeight: '700', marginTop: 2 },
 });

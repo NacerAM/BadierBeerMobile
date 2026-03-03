@@ -7,6 +7,7 @@ import { spacing } from "../../../src/theme/spacing";
 import { typography } from "../../../src/theme/typography";
 import { getGlassApi, Glass, rateGlassApi } from "../../../src/api/glassesApi";
 import { useAuth } from "../../../src/store/useAuth";
+import Ionicons from "@expo/vector-icons/Ionicons";
 
 export default function GlassDetailVisitorScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -72,7 +73,7 @@ export default function GlassDetailVisitorScreen() {
   }
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={{ paddingBottom: spacing.xxl }}>
+    <ScrollView style={styles.container} contentContainerStyle={{ paddingBottom: spacing.xxl + 70 }}>
       {/* Top bar */}
       <View style={styles.topBar}>
         <Pressable onPress={() => router.back()} style={styles.backBtn} hitSlop={10}>
@@ -133,6 +134,17 @@ export default function GlassDetailVisitorScreen() {
           <Button label="Créer un compte" variant="secondary" onPress={() => router.push("/(visitor)/register" as any)} />
         </View>
       </View>
+
+      <View style={styles.bottomBar}>
+        <Pressable style={styles.bottomItem} onPress={() => router.replace('/(visitor)/' as any)}>
+          <Ionicons name="home" size={22} color={colors.text as any} />
+          <Text style={styles.bottomLabel}>Accueil</Text>
+        </Pressable>
+        <Pressable style={styles.bottomItem} onPress={() => router.push('/(visitor)/explore' as any)}>
+          <Ionicons name="compass" size={22} color={colors.text as any} />
+          <Text style={styles.bottomLabel}>Explorer</Text>
+        </Pressable>
+      </View>
     </ScrollView>
   );
 }
@@ -140,47 +152,13 @@ export default function GlassDetailVisitorScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.bg },
 
-  topBar: {
-    paddingTop: spacing.xl,
-    paddingHorizontal: spacing.lg,
-    paddingBottom: spacing.md,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-  },
-  backBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
-    backgroundColor: colors.card,
-    borderWidth: 1,
-    borderColor: colors.border,
-    alignItems: "center",
-    justifyContent: "center",
-    shadowColor: colors.shadow as any,
-    shadowOpacity: 0.15,
-    shadowRadius: 10,
-    shadowOffset: { width: 0, height: 6 },
-    elevation: 2,
-  },
-  backText: { fontSize: 26, fontWeight: "900", color: colors.text, marginTop: -2 },
-  topTitle: { fontSize: 16, fontWeight: "900", color: colors.text },
+  topBar: { paddingTop: spacing.xl, paddingHorizontal: spacing.lg, paddingBottom: spacing.md, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  backBtn: { width: 40, height: 40, borderRadius: 12, backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border, alignItems: 'center', justifyContent: 'center', shadowColor: colors.shadow as any, shadowOpacity: 0.15, shadowRadius: 10, shadowOffset: { width: 0, height: 6 }, elevation: 2 },
+  backText: { fontSize: 26, fontWeight: '900', color: colors.text, marginTop: -2 },
+  topTitle: { fontSize: 16, fontWeight: '900', color: colors.text },
 
-  imageWrap: {
-    marginHorizontal: spacing.lg,
-    borderRadius: 18,
-    overflow: "hidden",
-    borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.card,
-    shadowColor: colors.shadow as any,
-    shadowOpacity: 0.22,
-    shadowRadius: 14,
-    shadowOffset: { width: 0, height: 10 },
-    elevation: 4,
-    position: "relative",
-  },
-  image: { width: "100%", height: 260, backgroundColor: colors.card },
+  imageWrap: { marginHorizontal: spacing.lg, borderRadius: 18, overflow: 'hidden', borderWidth: 1, borderColor: colors.border, backgroundColor: colors.card, shadowColor: colors.shadow as any, shadowOpacity: 0.22, shadowRadius: 14, shadowOffset: { width: 0, height: 10 }, elevation: 4, position: 'relative' },
+  image: { width: '100%', height: 260, backgroundColor: colors.card },
   imagePlaceholder: { height: 260, alignItems: 'center', justifyContent: 'center', gap: 6, backgroundColor: colors.bg2 },
   imageEmoji: { fontSize: 44 },
 
@@ -201,4 +179,8 @@ const styles = StyleSheet.create({
   centerText: { color: colors.muted },
   errorText: { color: colors.dangerText, fontWeight: '900', textAlign: 'center' },
   retry: { color: colors.primaryDark, fontWeight: '900' },
+
+  bottomBar: { position: 'absolute', left: 0, right: 0, bottom: 0, height: 64, backgroundColor: colors.card, borderTopWidth: 1, borderTopColor: colors.border, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-evenly', paddingBottom: 6 },
+  bottomItem: { alignItems: 'center' },
+  bottomLabel: { color: colors.text, fontWeight: '700', marginTop: 2 },
 });
