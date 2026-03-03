@@ -4,7 +4,8 @@ import { Link, router } from "expo-router";
 import { colors } from "../../src/theme/colors";
 import { spacing } from "../../src/theme/spacing";
 import { typography } from "../../src/theme/typography";
-import Button from "../../src/components/Button";\nimport Ionicons from "@expo/vector-icons/Ionicons";
+import Button from "../../src/components/Button";
+import Ionicons from "@expo/vector-icons/Ionicons";
 import { useAuth } from "../../src/store/useAuth";
 import { healthApi } from "../../src/api/healthApi";
 import { listGlassesApi, Glass } from "../../src/api/glassesApi";
@@ -203,5 +204,6 @@ const styles = StyleSheet.create({
   cardTitle: { fontWeight: "900", color: colors.text, marginTop: 6 },
   cardSub: { color: colors.muted, marginTop: 2, fontSize: 12 },
 });
+
 
 
