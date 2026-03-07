@@ -61,7 +61,7 @@ export default function ProposalsScreen() {
   );
 
   return (
-    <View style={styles.container}>      <View style={styles.topBar}>
+    <View style={styles.container}>\r\n    <View style={styles.topBar}>
         <Pressable onPress={() => router.push("/(user)/(tabs)/profile" as any)} style={styles.backBtn} hitSlop={10}>
           <Text style={styles.backText}>‹</Text>
         </Pressable>
@@ -134,13 +134,6 @@ export default function ProposalsScreen() {
 
 const styles = StyleSheet.create({
   topBar: { paddingTop: spacing.xl, paddingHorizontal: spacing.lg, paddingBottom: spacing.md, flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
-  backBtn: { width: 40, height: 40, borderRadius: 12, backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border, alignItems: "center", justifyContent: "center", shadowColor: colors.shadow as any, shadowOpacity: 0.15, shadowRadius: 10, shadowOffset: { width: 0, height: 6 }, elevation: 2 },
-  backText: { fontSize: 26, fontWeight: "900", color: colors.text, marginTop: -2 },
-  topTitle: { fontSize: 16, fontWeight: "900", color: colors.text },
-  
-  backBtn: { width: 40, height: 40, borderRadius: 12, backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border, alignItems: "center", justifyContent: "center", shadowColor: colors.shadow as any, shadowOpacity: 0.15, shadowRadius: 10, shadowOffset: { width: 0, height: 6 }, elevation: 2 },
-  backText: { fontSize: 26, fontWeight: "900", color: colors.text, marginTop: -2 },
-  topTitle: { fontSize: 16, fontWeight: "900", color: colors.text },
   container: { flex: 1, paddingTop: spacing.lg, paddingHorizontal: spacing.md, backgroundColor: colors.bg },
   title: { fontSize: typography.h1, fontWeight: "800", color: colors.text, marginBottom: spacing.md },
 
@@ -159,6 +152,7 @@ const styles = StyleSheet.create({
   badgeText: { fontSize: 12, fontWeight: "800" },
   reject: { marginTop: 8, color: colors.dangerText, fontWeight: "800" },
 });
+
 
 
 
