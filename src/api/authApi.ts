@@ -27,4 +27,6 @@ export async function forgotPasswordApi(email: string) {
 export async function updateMeApi(payload: { username?: string; avatarUrl?: string | null }) {
   return apiRequest<{ id: number; username: string; email: string; role: string; avatarUrl?: string | null }>("/api/auth/me", "PATCH", payload);
 }
-
+export async function changePasswordApi(oldPassword: string, newPassword: string) {
+  return apiRequest<{ message: string }>("/api/auth/change-password", "POST", { oldPassword, newPassword });
+}

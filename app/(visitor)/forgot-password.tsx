@@ -41,17 +41,7 @@ export default function ForgotPasswordScreen() {
 
       <Button label="Envoyer" onPress={onSubmit} />
 
-      <View style={styles.bottomBar}>
-        <Pressable style={styles.bottomItem} onPress={() => router.replace('/(visitor)/' as any)}>
-          <Ionicons name="home" size={22} color={colors.text as any} />
-          <Text style={styles.bottomLabel}>Accueil</Text>
-        </Pressable>
-        <Pressable style={styles.bottomItem} onPress={() => router.push('/(visitor)/explore' as any)}>
-          <Ionicons name="compass" size={22} color={colors.text as any} />
-          <Text style={styles.bottomLabel}>Explorer</Text>
-        </Pressable>
-      </View>
-    </View>
+          </View>
   );
 }
 
@@ -59,7 +49,5 @@ const styles = StyleSheet.create({
   container: { flex: 1, padding: spacing.lg, backgroundColor: colors.bg },
   title: { fontSize: typography.h1, fontWeight: '700', marginBottom: spacing.sm, color: colors.text },
   subtitle: { color: colors.muted, marginBottom: spacing.lg },
-  bottomBar: { position: 'absolute', left: 0, right: 0, bottom: 0, height: 64, backgroundColor: colors.card, borderTopWidth: 1, borderTopColor: colors.border, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-evenly', paddingBottom: 6 },
-  bottomItem: { alignItems: 'center' },
-  bottomLabel: { color: colors.text, fontWeight: '700', marginTop: 2 },
 });
+

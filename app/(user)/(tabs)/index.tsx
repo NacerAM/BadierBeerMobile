@@ -32,13 +32,7 @@ export default function UserHomeScreen() {
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Badier Beer</Text>
 
-        <Pressable
-          onPress={() => router.push("/(user)/(tabs)/profile" as any)}
-          style={styles.headerIcon}
-          hitSlop={10}
-        >
-          {user?.avatarUrl ? (<Image source={{ uri: (user as any).avatarUrl }} style={styles.headerAvatar} />) : (<Text style={styles.headerIconText}>🙂</Text>)}
-        </Pressable>
+        <View style={{ width: 40 }} />
       </View>
 
       {/* Hero image */}
@@ -88,14 +82,20 @@ export default function UserHomeScreen() {
         </Pressable>
       </View>
 
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.cardsRow}>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.cardsRow}>
         {items.map((g) => (
           <Pressable
             key={g.id}
             style={styles.card}
             onPress={() => router.push({ pathname: "/(user)/glass/[id]", params: { id: String(g.id) } } as any)}
           >
-            {(g.images && g.images.length) ? (<Image source={{ uri: (g.images.find(i=>i.isPrimary)||g.images[0]).url }} style={{ width: 140, height: 110, borderRadius: 12 }} />) : (<View style={styles.cardImagePlaceholder}><Text style={{ color: colors.muted, fontSize: 28 }}>🍺</Text></View>)}
+            {(g.images && g.images.length) ? (
+              <Image source={{ uri: (g.images.find(i=>i.isPrimary)||g.images[0]).url }} style={{ width: 140, height: 110, borderRadius: 12 }} />
+            ) : (
+              <View style={styles.cardImagePlaceholder}>
+                <Text style={{ color: colors.muted, fontSize: 28 }}>🍺</Text>
+              </View>
+            )}
 
             <View style={styles.badge}>
               <Text style={styles.badgeText}>Validé</Text>
@@ -262,6 +262,13 @@ const styles = StyleSheet.create({
   cardTitle: { fontWeight: "900", color: colors.text, marginTop: 6 },
   cardSub: { color: colors.muted, marginTop: 2, fontSize: 12 },
 });
+
+
+
+
+
+
+
 
 
 

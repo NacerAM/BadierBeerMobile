@@ -76,17 +76,7 @@ export default function LoginScreen() {
         <Link href={"/(visitor)/register" as any} style={styles.link}>Créer un compte</Link>
       </View>
 
-      <View style={styles.bottomBar}>
-        <Pressable style={styles.bottomItem} onPress={() => router.replace('/(visitor)/' as any)}>
-          <Ionicons name="home" size={22} color={colors.text as any} />
-          <Text style={styles.bottomLabel}>Accueil</Text>
-        </Pressable>
-        <Pressable style={styles.bottomItem} onPress={() => router.push('/(visitor)/explore' as any)}>
-          <Ionicons name="compass" size={22} color={colors.text as any} />
-          <Text style={styles.bottomLabel}>Explorer</Text>
-        </Pressable>
-      </View>
-    </View>
+          </View>
   );
 }
 
@@ -95,7 +85,5 @@ const styles = StyleSheet.create({
   title: { fontSize: typography.h1, fontWeight: '700', marginBottom: spacing.lg, color: colors.text },
   links: { marginTop: spacing.lg, gap: spacing.sm },
   link: { color: colors.primaryDark, fontWeight: '600' },
-  bottomBar: { position: 'absolute', left: 0, right: 0, bottom: 0, height: 64, backgroundColor: colors.card, borderTopWidth: 1, borderTopColor: colors.border, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-evenly', paddingBottom: 6 },
-  bottomItem: { alignItems: 'center' },
-  bottomLabel: { color: colors.text, fontWeight: '700', marginTop: 2 },
 });
+

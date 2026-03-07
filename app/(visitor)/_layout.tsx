@@ -1,8 +1,8 @@
 ﻿import { Tabs } from "expo-router";
 import Ionicons from "@expo/vector-icons/Ionicons";
-import { colors } from "../../../src/theme/colors";
+import { colors } from "../../src/theme/colors";
 
-export default function UserTabsLayout() {
+export default function VisitorTabsLayout() {
   return (
     <Tabs
       screenOptions={{
@@ -33,15 +33,6 @@ export default function UserTabsLayout() {
         }}
       />
       <Tabs.Screen
-        name="messages"
-        options={{
-          title: 'Messagerie',
-          tabBarIcon: ({ color, size, focused }) => (
-            <Ionicons name={focused ? 'chatbubbles' : 'chatbubbles-outline'} color={color} size={size ?? 22} />
-          ),
-        }}
-      />
-      <Tabs.Screen
         name="explore"
         options={{
           title: 'Explorer',
@@ -51,13 +42,11 @@ export default function UserTabsLayout() {
         }}
       />
 
-      {/* Hidden tabs (accessibles par navigation mais pas affichées) */}
-      <Tabs.Screen name="collection" options={{ href: null }} />
-      <Tabs.Screen name="propose" options={{ href: null }} />
-      <Tabs.Screen name="proposals" options={{ href: null }} />
-      <Tabs.Screen name="profile" options={{ href: null }} />
-      <Tabs.Screen name="edit-profile" options={{ href: null }} />
-      <Tabs.Screen name="settings" options={{ href: null }} />
+      {/* Hidden screens that still use the same tab bar */}
+      <Tabs.Screen name="login" options={{ href: null }} />
+      <Tabs.Screen name="register" options={{ href: null }} />
+      <Tabs.Screen name="forgot-password" options={{ href: null }} />
+      <Tabs.Screen name="glass/[id]" options={{ href: null }} />
     </Tabs>
   );
 }

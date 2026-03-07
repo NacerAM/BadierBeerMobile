@@ -1,10 +1,10 @@
-import { apiRequest } from "./client";
+﻿import { apiRequest } from "./client";
 
 export type ProposeGlassPayload = {
   name: string;
-  description?: string;
+  description: string;
   manufacturerName: string;
-  imageUrls?: string[]; // pour l’instant on fait simple : URL
+  imageUrls: string[]; // pour l’instant on fait simple : URL
 };
 
 export type ProposeGlassResponse = {
@@ -24,4 +24,8 @@ export async function proposeGlassApi(payload: ProposeGlassPayload) {
 
 export async function listMyProposalsApi() {
   return apiRequest<MyProposalsResponse>("/api/my/proposals", "GET");
+}
+
+export async function deleteMyProposalApi(id: number, password: string) {
+  return apiRequest<{ message: string }>(`/api/my/proposals/${id}`, "DELETE", { password });
 }

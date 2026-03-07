@@ -1,20 +1,27 @@
-import React, { useCallback, useState } from "react";
-import { View, Text, StyleSheet, FlatList, ActivityIndicator } from "react-native";
+﻿import React, { useCallback, useState } from "react";
+import { View, Text, StyleSheet, FlatList, ActivityIndicator, Pressable } from "react-native";
 import { useFocusEffect } from "@react-navigation/native";
-import { listMyProposalsApi } from "../../../src/api/proposalsApi";
+import { router } from "expo-router";
+import { listMyProposalsApi, deleteMyProposalApi } from "../../../src/api/proposalsApi";
 import { colors } from "../../../src/theme/colors";
 import { spacing } from "../../../src/theme/spacing";
 import { typography } from "../../../src/theme/typography";
 
+import Button from "../../../src/components/Button";
+import Input from "../../../src/components/Input";
 function badge(status?: string) {
-  if (status === "VALIDE") return { bg: colors.successBg, text: colors.successText, label: "Validé" };
-  if (status === "REJETE") return { bg: colors.dangerBg, text: colors.dangerText, label: "Rejeté" };
+  if (status === "VALIDE") return { bg: colors.successBg, text: colors.successText, label: "ValidÃ©" };
+  if (status === "REJETE") return { bg: colors.dangerBg, text: colors.dangerText, label: "RejetÃ©" };
   return { bg: colors.warningBg, text: colors.warningText, label: "En attente" };
 }
 
 export default function ProposalsScreen() {
   const [items, setItems] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [showForId, setShowForId] = useState<number | null>(null);
+  const [password, setPassword] = useState("");
+  const [deleting, setDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   async function load() {
@@ -30,6 +37,23 @@ export default function ProposalsScreen() {
     }
   }
 
+
+  async function onDelete(id: number) {
+    if (!password.trim()) { setDeleteError("Mot de passe requis"); return; }
+    try {
+      setDeleting(true);
+      setDeleteError(null);
+      await deleteMyProposalApi(id, password.trim());
+      setPassword("");
+      setShowForId(null);
+      await load();
+    } catch (e: any) {
+      setDeleteError(e?.message || "Suppression impossible");
+    } finally {
+      setDeleting(false);
+    }
+  }
+
   useFocusEffect(
     useCallback(() => {
       load();
@@ -37,23 +61,30 @@ export default function ProposalsScreen() {
   );
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>Mes demandes</Text>
+    <View style={styles.container}>      <View style={styles.topBar}>
+        <Pressable onPress={() => router.push("/(user)/(tabs)/profile" as any)} style={styles.backBtn} hitSlop={10}>
+          <Text style={styles.backText}>‹</Text>
+        </Pressable>
+        <Text style={styles.topTitle} numberOfLines={1}>Mes demandes</Text>
+        <View style={{ width: 40 }} />
+      </View>
 
       {loading ? (
         <View style={styles.center}>
           <ActivityIndicator />
-          <Text style={styles.muted}>Chargement…</Text>
+          <Text style={styles.muted}>Chargementâ€¦</Text>
         </View>
       ) : error ? (
         <View style={styles.center}>
           <Text style={styles.error}>{error}</Text>
           <Text style={styles.retry} onPress={load}>
-            Réessayer
+            RÃ©essayer
           </Text>
         </View>
       ) : (
         <FlatList
+
+
           data={items}
           keyExtractor={(it) => String(it.id)}
           contentContainerStyle={{ gap: spacing.md, paddingBottom: spacing.xl }}
@@ -69,12 +100,28 @@ export default function ProposalsScreen() {
                   </View>
                 </View>
 
-                <Text style={styles.cardSubtitle}>{item.Manufacturer?.name || "—"}</Text>
+                <Text style={styles.cardSubtitle}>{item.Manufacturer?.name || "â€”"}</Text>
 
                 {item.description ? <Text style={styles.desc}>{item.description}</Text> : null}
 
                 {item.status === "REJETE" && item.rejectReason ? (
                   <Text style={styles.reject}>Raison : {item.rejectReason}</Text>
+                ) : null}
+                {item.status === "EN_ATTENTE" ? (
+                  showForId === item.id ? (
+                    <View style={{ marginTop: spacing.sm, gap: spacing.sm }}>
+                      {deleteError ? <Text style={{ color: colors.dangerText, fontWeight: "800" }}>{deleteError}</Text> : null}
+                      <Input label="Mot de passe" value={password} onChangeText={setPassword} secureTextEntry />
+                      <View style={{ flexDirection: "row", justifyContent: "flex-end", gap: 8 }}>
+                        <Button label="Annuler" variant="secondary" onPress={() => { setShowForId(null); setPassword(""); setDeleteError(null); }} />
+                        <Button label={deleting ? "Suppression..." : "Confirmer"} onPress={() => onDelete(item.id)} disabled={deleting || !password.trim()} />
+                      </View>
+                    </View>
+                  ) : (
+                    <View style={{ marginTop: spacing.sm, flexDirection: "row", justifyContent: "flex-end" }}>
+                      <Text onPress={() => setShowForId(item.id)} style={{ color: colors.dangerText, fontWeight: "800" }}>Supprimer</Text>
+                    </View>
+                  )
                 ) : null}
               </View>
             );
@@ -86,6 +133,14 @@ export default function ProposalsScreen() {
 }
 
 const styles = StyleSheet.create({
+  topBar: { paddingTop: spacing.xl, paddingHorizontal: spacing.lg, paddingBottom: spacing.md, flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
+  backBtn: { width: 40, height: 40, borderRadius: 12, backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border, alignItems: "center", justifyContent: "center", shadowColor: colors.shadow as any, shadowOpacity: 0.15, shadowRadius: 10, shadowOffset: { width: 0, height: 6 }, elevation: 2 },
+  backText: { fontSize: 26, fontWeight: "900", color: colors.text, marginTop: -2 },
+  topTitle: { fontSize: 16, fontWeight: "900", color: colors.text },
+  
+  backBtn: { width: 40, height: 40, borderRadius: 12, backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border, alignItems: "center", justifyContent: "center", shadowColor: colors.shadow as any, shadowOpacity: 0.15, shadowRadius: 10, shadowOffset: { width: 0, height: 6 }, elevation: 2 },
+  backText: { fontSize: 26, fontWeight: "900", color: colors.text, marginTop: -2 },
+  topTitle: { fontSize: 16, fontWeight: "900", color: colors.text },
   container: { flex: 1, paddingTop: spacing.lg, paddingHorizontal: spacing.md, backgroundColor: colors.bg },
   title: { fontSize: typography.h1, fontWeight: "800", color: colors.text, marginBottom: spacing.md },
 
@@ -104,5 +159,12 @@ const styles = StyleSheet.create({
   badgeText: { fontSize: 12, fontWeight: "800" },
   reject: { marginTop: 8, color: colors.dangerText, fontWeight: "800" },
 });
+
+
+
+
+
+
+
 
 

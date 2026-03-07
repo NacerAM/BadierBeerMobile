@@ -1,4 +1,4 @@
-import React from "react";
+﻿import React from "react";
 import { Pressable, Text, StyleSheet, ViewStyle } from "react-native";
 import { colors } from "../theme/colors";
 import { spacing } from "../theme/spacing";
@@ -49,6 +49,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     alignItems: "center",
     justifyContent: "center",
+    overflow: "hidden",
 
     shadowColor: colors.shadow as any,
     shadowOpacity: 0.25,
@@ -72,6 +73,8 @@ const styles = StyleSheet.create({
     fontSize: 15,
     color: "#2E1A0F",
     letterSpacing: 0.3,
+  
+    backgroundColor: "transparent",
   },
 
   textSecondary: {
@@ -87,3 +90,7 @@ const styles = StyleSheet.create({
     opacity: 0.5,
   },
 });
+
+
+
+
