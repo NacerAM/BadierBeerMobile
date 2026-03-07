@@ -2,7 +2,7 @@
 import { View, Text, StyleSheet, FlatList, ActivityIndicator, Pressable } from "react-native";
 import { useFocusEffect } from "@react-navigation/native";
 import { router } from "expo-router";
-import { listMyProposalsApi, deleteMyProposalApi } from "../../../src/api/proposalsApi";
+import Ionicons from "@expo/vector-icons/Ionicons";`r`nimport { listMyProposalsApi, deleteMyProposalApi } from "../../../src/api/proposalsApi";
 import { colors } from "../../../src/theme/colors";
 import { spacing } from "../../../src/theme/spacing";
 import { typography } from "../../../src/theme/typography";
@@ -61,9 +61,9 @@ export default function ProposalsScreen() {
   );
 
   return (
-    <View style={styles.container}>\r\n    <View style={styles.topBar}>
+    <View style={styles.container}>`r`n    <View style={styles.topBar}>
         <Pressable onPress={() => router.push("/(user)/(tabs)/profile" as any)} style={styles.backBtn} hitSlop={10}>
-          <Text style={styles.backText}>‹</Text>
+          <Ionicons name="chevron-back" size={20} color={colors.text as any} />
         </Pressable>
         <Text style={styles.topTitle} numberOfLines={1}>Mes demandes</Text>
         <View style={{ width: 40 }} />
@@ -134,7 +134,7 @@ export default function ProposalsScreen() {
 
 const styles = StyleSheet.create({
   topBar: { paddingTop: spacing.xl, paddingHorizontal: spacing.lg, paddingBottom: spacing.md, flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
-  container: { flex: 1, paddingTop: spacing.lg, paddingHorizontal: spacing.md, backgroundColor: colors.bg },
+  backBtn: { width: 40, height: 40, borderRadius: 12, backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border, alignItems: "center", justifyContent: "center", shadowColor: colors.shadow as any, shadowOpacity: 0.15, shadowRadius: 10, shadowOffset: { width: 0, height: 6 }, elevation: 2 },\r\n  topTitle: { fontSize: typography.h1, fontWeight: "900", color: colors.text },\r\n  container: { flex: 1, paddingTop: spacing.lg, paddingHorizontal: spacing.md, backgroundColor: colors.bg },
   title: { fontSize: typography.h1, fontWeight: "800", color: colors.text, marginBottom: spacing.md },
 
   center: { flex: 1, alignItems: "center", justifyContent: "center", gap: 10, padding: spacing.lg },
@@ -152,6 +152,9 @@ const styles = StyleSheet.create({
   badgeText: { fontSize: 12, fontWeight: "800" },
   reject: { marginTop: 8, color: colors.dangerText, fontWeight: "800" },
 });
+
+
+
 
 
 
