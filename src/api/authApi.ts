@@ -2,7 +2,7 @@
 
 export type LoginResponse = {
   token: string;
-  user: { id: number; username: string; email: string; role: string; avatarUrl?: string | null };
+  user: { id: number; username: string; email: string; role: string; avatarUrl?: string | null; bio?: string | null };
 };
 
 export async function loginApi(email: string, password: string) {
@@ -24,9 +24,10 @@ export async function resendVerificationApi(email: string) {
 export async function forgotPasswordApi(email: string) {
   return apiRequest<{ message: string; previewUrl?: string }>("/api/auth/forgot-password", "POST", { email });
 }
-export async function updateMeApi(payload: { username?: string; avatarUrl?: string | null }) {
-  return apiRequest<{ id: number; username: string; email: string; role: string; avatarUrl?: string | null }>("/api/auth/me", "PATCH", payload);
+export async function updateMeApi(payload: { username?: string; avatarUrl?: string | null; bio?: string | null }) {
+  return apiRequest<{ id: number; username: string; email: string; role: string; avatarUrl?: string | null; bio?: string | null }>("/api/auth/me", "PATCH", payload);
 }
 export async function changePasswordApi(oldPassword: string, newPassword: string) {
   return apiRequest<{ message: string }>("/api/auth/change-password", "POST", { oldPassword, newPassword });
 }
+

@@ -21,6 +21,7 @@ export type Glass = {
   images?: GlassImage[];
   avgRating?: number | null;
   ratingsCount?: number;
+  createdBy?: { id: number; username: string; avatarUrl?: string | null };
 };
 
 export type GlassListResponse = {
@@ -43,3 +44,4 @@ export async function getGlassApi(id: number) {
 export async function rateGlassApi(id: number, rating: number) {
   return apiRequest<{ myRating: number; avgRating: number | null; ratingsCount: number }>(`/api/glasses/${id}/rating`, "PUT", { rating });
 }
+

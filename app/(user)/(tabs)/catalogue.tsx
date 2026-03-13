@@ -5,10 +5,13 @@ import { router } from "expo-router";
 import { colors } from "../../../src/theme/colors";
 import { spacing } from "../../../src/theme/spacing";
 import { typography } from "../../../src/theme/typography";
+import { useCollection } from "../../../src/store/useCollection";
 import { Glass, listGlassesApi } from "../../../src/api/glassesApi";
 
 export default function CatalogueUserScreen() {
   const [q, setQ] = useState("");
+  const { items: myCollection, refresh: refreshCollection, has } = useCollection();
+  const [onlyMine, setOnlyMine] = useState(false);
   const [items, setItems] = useState<Glass[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -26,14 +29,19 @@ export default function CatalogueUserScreen() {
     }
   }, []);
 
-  useEffect(() => { load(); }, [load]);
-  useFocusEffect(useCallback(() => { load(); }, [load]));
+  useEffect(() => { load(); refreshCollection(); }, [load]);
+  useFocusEffect(useCallback(() => { load(); refreshCollection(); }, [load]));
 
   const filtered = useMemo(() => {
     const query = q.trim().toLowerCase();
-    if (!query) return items;
-    return items.filter((g) => (g.name.toLowerCase().includes(query) || (g.Manufacturer?.name || '').toLowerCase().includes(query)));
-  }, [q, items]);
+    let base = items;
+    if (onlyMine) {
+      const ids = new Set(myCollection.map((r: any) => r.glassId));
+      base = items.filter((g) => ids.has(g.id));
+    }
+    if (!query) return base;
+    return base.filter((g) => (g.name.toLowerCase().includes(query) || (g.Manufacturer?.name || '').toLowerCase().includes(query)));
+  }, [q, items, onlyMine, myCollection]);
 
   function primaryImageUrl(g: Glass): string | null {
     const list = g.images || [];
@@ -56,8 +64,16 @@ export default function CatalogueUserScreen() {
   return (
     <View style={styles.container}>
       <Text style={styles.title}>Catalogue</Text>
+      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, marginBottom: spacing.md }}>
+        <Pressable onPress={() => setOnlyMine(false)} style={{ paddingHorizontal: 10, paddingVertical: 6, borderRadius: 999, backgroundColor: !onlyMine ? colors.primary : 'transparent', borderWidth: 1, borderColor: colors.border }}>
+          <Text style={{ color: !onlyMine ? '#fff' : colors.text, fontWeight: '900', fontSize: 12 }}>Tous</Text>
+        </Pressable>
+        <Pressable onPress={() => setOnlyMine(true)} style={{ paddingHorizontal: 10, paddingVertical: 6, borderRadius: 999, backgroundColor: onlyMine ? colors.primary : 'transparent', borderWidth: 1, borderColor: colors.border }}>
+          <Text style={{ color: onlyMine ? '#fff' : colors.text, fontWeight: '900', fontSize: 12 }}>Ma collection</Text>
+        </Pressable>
+      </View>
       <View style={styles.searchWrap}>
-        <Text style={styles.searchIcon}>⌥</Text>
+        <Text style={styles.searchIcon}>🔎</Text>
         <TextInput value={q} onChangeText={setQ} placeholder="Rechercher…" placeholderTextColor={colors.muted} style={styles.search} autoCapitalize="none" />
       </View>
 
@@ -83,6 +99,11 @@ export default function CatalogueUserScreen() {
                 <View style={styles.badge}><Text style={styles.badgeText}>Validé</Text></View>
               </View>
               <Text style={styles.cardTitle} numberOfLines={1}>{item.name}</Text>
+              {has(item.id) ? (
+                <View style={{ marginTop: 6, alignSelf: "flex-start", backgroundColor: colors.successBg, paddingHorizontal: 8, paddingVertical: 2, borderRadius: 999 }}>
+                  <Text style={{ color: colors.successText, fontWeight: "900", fontSize: 10 }}>Dans ma collection</Text>
+                </View>
+              ) : null}
               <Text style={styles.cardSubtitle} numberOfLines={1}>{item.Manufacturer?.name || '—'}</Text>
               <View style={{ marginTop: 6, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
                 <StarsBar avg={item.avgRating} />

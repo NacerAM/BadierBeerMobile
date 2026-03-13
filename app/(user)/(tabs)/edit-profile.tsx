@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+Ôªøimport React, { useState } from "react";
 import { View, Text, StyleSheet, Alert, ScrollView } from "react-native";
 import Input from "../../../src/components/Input";
 import Button from "../../../src/components/Button";
@@ -13,6 +13,7 @@ export default function EditProfileScreen() {
   const { user, token, login } = useAuth();
   const [username, setUsername] = useState(user?.username || "");
   const [avatarUrl, setAvatarUrl] = useState((user as any)?.avatarUrl || "");
+  const [bio, setBio] = useState((user as any)?.bio || "");
 
   async function onSave() {
     const u = username.trim();
@@ -23,28 +24,30 @@ export default function EditProfileScreen() {
     try {
       const payload: any = { username: u };
       const url = (avatarUrl || '').trim();
-      if (url) payload.avatarUrl = url; else payload.avatarUrl = null;
+      if (url) payload.avatarUrl = url; else payload.avatarUrl = null; payload.bio = bio.trim() ? bio.trim() : null;
 
       const updated = await updateMeApi(payload);
       await login({ token: token!, user: { ...(user as any), ...updated } });
-      Alert.alert("Profil", "Modifications enregistrÈes");
+      Alert.alert("Profil", "Modifications enregistr√©es");
       router.back();
     } catch (e: any) {
       const status = e?.status as number | undefined;
       if (status === 409) {
-        Alert.alert("Nom dÈj‡ pris", "Veuillez choisir un autre nom d'utilisateur");
+        Alert.alert("Nom d√©j√† pris", "Veuillez choisir un autre nom d'utilisateur");
       } else {
-        Alert.alert("Erreur", e?.message || "…chec de sauvegarde");
+        Alert.alert("Erreur", e?.message || "√âchec de sauvegarde");
       }
     }
   }
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={{ paddingBottom: spacing.xl }}>
-      <Text style={styles.title}>…diter le profil</Text>
+      <Text style={styles.title}>√âditer le profil</Text>
 
       <Input label="Nom d'utilisateur" value={username} onChangeText={setUsername} autoCapitalize="none" />
       <Input label="URL de la photo (optionnel)" value={avatarUrl} onChangeText={setAvatarUrl} autoCapitalize="none" />
+
+      <Input label="Pr√©sentation (bio)" value={bio} onChangeText={setBio} multiline numberOfLines={4} style={{ minHeight: 100, textAlignVertical: "top" }} />
 
       <Button label="Enregistrer" onPress={onSave} />
       <View style={{ height: spacing.sm }} />

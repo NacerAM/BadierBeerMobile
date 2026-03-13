@@ -1,623 +1,891 @@
-﻿import React, { useEffect, useMemo, useState } from "react";
+﻿import React, { useEffect, useMemo, useState } from "react";
+import { useLocalSearchParams, router } from "expo-router";
 
-import {
 
-  View,
+import { View, Text, StyleSheet, ActivityIndicator, Image, ScrollView, Pressable, Modal, FlatList, Dimensions, Platform, ToastAndroid, Alert } from "react-native";
 
-  Text,
 
-  StyleSheet,
+function showToast(msg: string) { if (Platform.OS === 'android') { ToastAndroid.show(msg, ToastAndroid.SHORT); } else { Alert.alert('Info', msg); } }
 
-  ActivityIndicator,
 
-  Image,
+import Button from "../../../src/components/Button";
 
-  ScrollView,
 
-  Pressable,
+import { colors } from "../../../src/theme/colors";
 
-  Modal,
 
-  FlatList,
+import { spacing } from "../../../src/theme/spacing";
 
-  Dimensions,
 
-} from "react-native";
+import { typography } from "../../../src/theme/typography";
 
-import { useLocalSearchParams, router } from "expo-router";
 
-import Button from "../../../src/components/Button";
+import { getGlassApi, Glass, rateGlassApi } from "../../../src/api/glassesApi";
 
-import { colors } from "../../../src/theme/colors";
 
-import { spacing } from "../../../src/theme/spacing";
+import { useCollection } from "../../../src/store/useCollection";
+import { useAuth } from "../../../src/store/useAuth";
 
-import { typography } from "../../../src/theme/typography";
 
-import { getGlassApi, Glass, rateGlassApi } from "../../../src/api/glassesApi";
 
-import { useCollection } from "../../../src/store/useCollection";
 
-
 
-export default function GlassDetailUserScreen() {
+export default function GlassDetailUserScreen() {
 
-  const { id } = useLocalSearchParams<{ id: string }>();
 
-  const glassId = Number(id);
+  const { id } = useLocalSearchParams<{ id: string }>();
 
-
 
-  const { has, toggle, refresh } = useCollection();
+  const glassId = Number(id);
 
-
 
-  const [glass, setGlass] = useState<Glass | null>(null);
 
-  const [loading, setLoading] = useState(true);
 
-  const [error, setError] = useState<string | null>(null);
 
-  const [saving, setSaving] = useState(false);
+    const { user } = useAuth();
+const { has, toggle, refresh } = useCollection();
 
-  const [myRating, setMyRating] = useState<number | null>(null);
 
-  const [viewerVisible, setViewerVisible] = useState(false);
+
+
+
+  const [glass, setGlass] = useState<Glass | null>(null);
+
+
+  const [loading, setLoading] = useState(true);
+
+
+  const [error, setError] = useState<string | null>(null);
+
+
+  const [saving, setSaving] = useState(false);
+
+
+  const [myRating, setMyRating] = useState<number | null>(null);
+
+
+  const [viewerVisible, setViewerVisible] = useState(false);
+
 
   const [viewerIndex, setViewerIndex] = useState(0);
-
 
-  async function load() {
 
-    try {
 
-      setLoading(true);
+  async function load() {
 
-      setError(null);
 
-
+    try {
 
-      await refresh();
 
-      const g = await getGlassApi(glassId);
+      setLoading(true);
 
-      setGlass(g);
 
-    } catch (e: any) {
+      setError(null);
 
-      setError(e?.message || "Erreur réseau");
 
-    } finally {
 
-      setLoading(false);
 
-    }
 
-  }
+      await refresh();
 
-
 
-  useEffect(() => {
+      const g = await getGlassApi(glassId);
 
-    load();
 
-  }, [glassId]);
+      setGlass(g);
 
-
 
-  const inCollection = has(glassId);
+    } catch (e: any) {
 
-
 
-  const primaryImage = useMemo(() => {
+      setError(e?.message || "Erreur réseau");
 
-    return (
 
-      glass?.images?.find((img) => img.isPrimary)?.url ||
+    } finally {
 
-      glass?.images?.[0]?.url
 
-    );
+      setLoading(false);
+
+
+    }
+
+
+  }
+
+
+
+
+
+  useEffect(() => {
+
+
+    load();
+
+
+  }, [glassId]);
+
+
+
+
+
+  const inCollection = has(glassId);
+
+
+
+
+
+    const isOwner = (glass as any)?.createdByUserId === (user as any)?.id;
+const primaryImage = useMemo(() => {
+
+
+    return (
+
+
+      glass?.images?.find((img) => img.isPrimary)?.url ||
+
+
+      glass?.images?.[0]?.url
+
+
+    );
+
 
   }, [glass]);
 
-  const imageUrls = useMemo(() => (glass?.images || []).map((i) => i.url), [glass]);
+  const imageUrls = useMemo(() => (glass?.images || []).map((i) => i.url), [glass]);
 
-
 
-  async function onToggle() {
 
-    try {
 
-      setSaving(true);
 
-      setError(null);
+  async function onToggle() {
 
-      await toggle(glassId);
 
-    } catch (e: any) {
+    try {
 
-      setError(e?.message || "Erreur action collection");
 
-    } finally {
+      setSaving(true);
 
-      setSaving(false);
 
-    }
+      setError(null);
 
-  }
 
-
+      await toggle(glassId);
+      await refresh();
+      showToast(inCollection ? "Retiré de votre collection" : "Ajouté à votre collection");
 
-  async function onRate(n: number) {
 
-    try {
+    } catch (e: any) {
 
-      const r = await rateGlassApi(glassId, n);
 
-      setMyRating(r.myRating);
+      setError(e?.message || "Erreur action collection");
 
-      setGlass((prev) => (prev ? { ...prev, avgRating: r.avgRating, ratingsCount: r.ratingsCount } : prev));
 
-    } catch (e: any) {
+    } finally {
 
-      setError(e?.message || "Échec de la notation");
 
-    }
+      setSaving(false);
 
-  }
 
-
+    }
 
-  function Stars({ value, size = 16, tint = colors.primaryDark }: { value: number; size?: number; tint?: string }) {
 
-    const full = Math.round(value);
+  }
 
-    return (
 
-      <Text style={{ fontSize: size, color: tint }}>
 
-        {Array.from({ length: 5 }).map((_, i) => (i < full ? "★" : "☆")).join("")}
 
-      </Text>
 
-    );
+  async function onRate(n: number) {
 
-  }
 
-
+    try {
 
-  if (loading) {
 
-    return (
+      const r = await rateGlassApi(glassId, n);
 
-      <View style={styles.center}>
 
-        <ActivityIndicator />
+      setMyRating(r.myRating);
 
-        <Text style={styles.centerText}>Chargement…</Text>
 
-      </View>
+      setGlass((prev) => (prev ? { ...prev, avgRating: r.avgRating, ratingsCount: r.ratingsCount } : prev));
 
-    );
 
-  }
+    } catch (e: any) {
 
-
 
-  if (error || !glass) {
+      setError(e?.message || "Échec de la notation");
 
-    return (
 
-      <View style={styles.center}>
+    }
 
-        <Text style={styles.errorText}>{error || "Verre introuvable"}</Text>
 
-        <Text style={styles.retry} onPress={load}>Réessayer</Text>
+  }
 
-      </View>
 
-    );
 
-  }
 
-
 
-  return (
+  function Stars({ value, size = 16, tint = colors.primaryDark }: { value: number; size?: number; tint?: string }) {
 
-    <ScrollView style={styles.container} contentContainerStyle={{ paddingBottom: spacing.xxl }}>
 
-      {/* Top bar */}
+    const full = Math.round(value);
 
-      <View style={styles.topBar}>
 
-        <Pressable onPress={() => router.back()} style={styles.backBtn} hitSlop={10}>
+    return (
 
-          <Text style={styles.backText}>‹</Text>
 
-        </Pressable>
+      <Text style={{ fontSize: size, color: tint }}>
 
-        <Text style={styles.topTitle} numberOfLines={1}>Détail du verre</Text>
 
-        <View style={{ width: 40 }} />
+        {Array.from({ length: 5 }).map((_, i) => (i < full ? "★" : "☆")).join("")}
 
-      </View>
 
-
+      </Text>
 
-      {/* Image */}
 
-      <View style={styles.imageWrap}>
+    );
 
-        {primaryImage ? (
 
-          <Pressable onPress={() => { const idx = Math.max(0, imageUrls.findIndex((u) => u === primaryImage)); setViewerIndex(idx); setViewerVisible(true); }}><Image source={{ uri: primaryImage }} style={styles.image} /></Pressable>
+  }
 
-        ) : (
 
-          <View style={styles.imagePlaceholder}>
 
-            <Text style={styles.imageEmoji}>🍺</Text>
 
-            <Text style={{ color: colors.muted }}>Aucune image</Text>
 
-          </View>
+  if (loading) {
 
-        )}
 
-        <View style={styles.badge}><Text style={styles.badgeText}>Validé</Text></View>
+    return (
 
-      </View>
 
-
+      <View style={styles.center}>
 
-      {/* Paper details */}
 
-      <View style={styles.paper}>
+        <ActivityIndicator />
 
-        <Text style={styles.title}>{glass.name}</Text>
 
-        <Text style={styles.brand}>{glass.Manufacturer?.name || "—"}</Text>
+        <Text style={styles.centerText}>Chargement…</Text>
 
-
 
-        {/* Rating section */}
+      </View>
 
-        <View style={[styles.section, { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }]}>
 
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+    );
 
-            <Stars value={Number(glass.avgRating || 0)} />
 
-            <Text style={{ color: colors.muted, fontSize: 12 }}>({glass.ratingsCount || 0})</Text>
+  }
 
-          </View>
 
-          <View style={{ flexDirection: 'row', gap: 6 }}>
 
-            {[1,2,3,4,5].map((n) => (
 
-              <Text key={n} onPress={() => onRate(n)} style={{ color: (myRating || 0) >= n ? colors.primaryDark : colors.text, fontSize: 18 }}>★</Text>
 
-            ))}
+  if (error || !glass) {
 
-          </View>
 
-        </View>
+    return (
 
-
 
-        {glass.description ? (
+      <View style={styles.center}>
 
-          <View style={styles.section}>
 
-            <Text style={styles.sectionTitle}>Description</Text>
+        <Text style={styles.errorText}>{error || "Verre introuvable"}</Text>
 
-            <Text style={styles.description}>{glass.description}</Text>
 
-          </View>
+        <Text style={styles.retry} onPress={load}>Réessayer</Text>
 
-        ) : null}
 
-
+      </View>
 
-        <View style={styles.section}>
 
-          <Text style={styles.sectionTitle}>Collection</Text>
+    );
 
-          <Text style={styles.muted}>
 
-            {inCollection ? "Ce verre est déjà dans votre collection." : "Ajoutez ce verre à votre collection personnelle."}
+  }
 
-          </Text>
 
-        </View>
 
-
 
-        <View style={{ marginTop: spacing.lg }}>
 
-          <Button
+  return (
 
-            label={saving ? "..." : inCollection ? "Retirer de ma collection" : "Ajouter à ma collection"}
 
-            variant={inCollection ? "secondary" : "primary"}
+    <ScrollView style={styles.container} contentContainerStyle={{ paddingBottom: spacing.xxl }}>
 
-            onPress={onToggle}
 
-            disabled={saving}
+      {/* Top bar */}
 
-          />
 
-        </View>
+      <View style={styles.topBar}>
 
-      </View>
 
-      <Modal visible={viewerVisible} transparent animationType="fade" onRequestClose={() => setViewerVisible(false)}>
+        <Pressable onPress={() => router.back()} style={styles.backBtn} hitSlop={10}>
 
-      <View style={styles.viewerOverlay}>
 
-        <FlatList
+          <Text style={styles.backText}>‹</Text>
 
-          horizontal
 
-          pagingEnabled
+        </Pressable>
 
-          data={imageUrls}
 
-          keyExtractor={(u, i) => u + String(i)}
+        <Text style={styles.topTitle} numberOfLines={1}>Détail du verre</Text>
 
-          initialScrollIndex={viewerIndex}
 
-          getItemLayout={(data, index) => { const width = Dimensions.get("window").width; return { length: width, offset: width * index, index }; }}
+        <View style={{ width: 40 }} />
 
-          renderItem={({ item }) => (
 
-            <View style={{ width: Dimensions.get("window").width, height: Dimensions.get("window").height, alignItems: "center", justifyContent: "center", backgroundColor: "black" }}>
+      </View>
 
-              <Image source={{ uri: item }} style={{ width: "100%", height: "100%" }} resizeMode="contain" />
 
-            </View>
 
-          )}
 
-        />
 
-        <Pressable onPress={() => setViewerVisible(false)} style={styles.viewerClose} hitSlop={10}>
+      {/* Image */}
 
-          <Text style={styles.viewerCloseText}>×</Text>
 
-        </Pressable>
+      <View style={styles.imageWrap}>
 
-      </View>
 
-    </Modal>
+        {primaryImage ? (
 
-    </ScrollView>
 
-  );
+          <Pressable onPress={() => { const idx = Math.max(0, imageUrls.findIndex((u) => u === primaryImage)); setViewerIndex(idx); setViewerVisible(true); }}><Image source={{ uri: primaryImage }} style={styles.image} /></Pressable>
 
-}
 
-
+        ) : (
 
-const styles = StyleSheet.create({
 
-  container: { flex: 1, backgroundColor: colors.bg },
+          <View style={styles.imagePlaceholder}>
 
-
 
-  topBar: {
+            <Text style={styles.imageEmoji}>🍺</Text>
 
-    paddingTop: spacing.xl,
 
-    paddingHorizontal: spacing.lg,
+            <Text style={{ color: colors.muted }}>Aucune image</Text>
 
-    paddingBottom: spacing.md,
 
-    flexDirection: "row",
+          </View>
 
-    alignItems: "center",
 
-    justifyContent: "space-between",
+        )}
 
-  },
 
-  backBtn: {
+        <View style={styles.badge}><Text style={styles.badgeText}>Validé</Text></View>
 
-    width: 40,
 
-    height: 40,
+      </View>
 
-    borderRadius: 12,
 
-    backgroundColor: colors.card,
 
-    borderWidth: 1,
 
-    borderColor: colors.border,
 
-    alignItems: "center",
+      {/* Paper details */}
 
-    justifyContent: "center",
 
-    shadowColor: colors.shadow as any,
+      <View style={styles.paper}>
+        <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
+          <Text style={styles.title}>Détail du verre</Text>
+          {glass?.createdBy ? (
+            <Pressable onPress={() => router.push({ pathname: "/(user)/profile/[id]", params: { id: String(glass.createdBy.id) } } as any)} hitSlop={10}>
+              <Text style={{ color: colors.primaryDark, fontWeight: "900" }}>Ajouté par {glass.createdBy.username}</Text>
+            </Pressable>
+          ) : null}
+        </View>
 
-    shadowOpacity: 0.15,
 
-    shadowRadius: 10,
+        <Text style={styles.title}>{glass.name}</Text>
 
-    shadowOffset: { width: 0, height: 6 },
 
-    elevation: 2,
+        <Text style={styles.brand}>{glass.Manufacturer?.name || "—"}</Text>
 
-  },
 
-  backText: { fontSize: 26, fontWeight: "900", color: colors.text, marginTop: -2 },
 
-  topTitle: { fontSize: 16, fontWeight: "900", color: colors.text },
 
-
 
-  imageWrap: {
+        {/* Rating section */}
 
-    marginHorizontal: spacing.lg,
 
-    borderRadius: 18,
+        <View style={[styles.section, { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }]}>
 
-    overflow: "hidden",
 
-    borderWidth: 1,
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
 
-    borderColor: colors.border,
 
-    backgroundColor: colors.card,
+            <Stars value={Number(glass.avgRating || 0)} />
 
-    shadowColor: colors.shadow as any,
 
-    shadowOpacity: 0.22,
+            <Text style={{ color: colors.muted, fontSize: 12 }}>({glass.ratingsCount || 0})</Text>
 
-    shadowRadius: 14,
 
-    shadowOffset: { width: 0, height: 10 },
+          </View>
 
-    elevation: 4,
 
-    position: "relative",
+          <View style={{ flexDirection: 'row', gap: 6 }}>
 
-  },
 
-  image: { width: "100%", height: 260, backgroundColor: colors.card },
+            {[1,2,3,4,5].map((n) => (
 
-  imagePlaceholder: {
 
-    height: 260,
+              <Text key={n} onPress={() => onRate(n)} style={{ color: (myRating || 0) >= n ? colors.primaryDark : colors.text, fontSize: 18 }}>★</Text>
 
-    alignItems: "center",
 
-    justifyContent: "center",
+            ))}
 
-    gap: 6,
 
-    backgroundColor: colors.bg2,
+          </View>
 
-  },
 
-  imageEmoji: { fontSize: 44 },
+        </View>
 
-
 
-  badge: {
 
-    position: "absolute",
 
-    left: spacing.md,
 
-    bottom: spacing.md,
+        {glass.description ? (
 
-    backgroundColor: colors.badgeBg,
 
-    paddingHorizontal: 12,
+          <View style={styles.section}>
 
-    paddingVertical: 6,
 
-    borderRadius: 999,
+            <Text style={styles.sectionTitle}>Description</Text>
 
-  },
 
-  badgeText: { color: colors.badgeText, fontWeight: "900", fontSize: 12 },
+            <Text style={styles.description}>{glass.description}</Text>
 
-
 
-  paper: {
+          </View>
 
-    marginTop: spacing.lg,
 
-    marginHorizontal: spacing.lg,
+        ) : null}
 
-    padding: spacing.lg,
 
-    borderRadius: 18,
 
-    backgroundColor: colors.card,
 
-    borderWidth: 1,
 
-    borderColor: colors.border,
+        {isOwner ? (
+          <>
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>Collection</Text>
+              <Text style={styles.muted}>{inCollection ? "Ce verre est déjà dans votre collection." : "Ajoutez ce verre à votre collection personnelle."}</Text>
+            </View>
+            <View style={{ marginTop: spacing.lg }}>
+              <Button
+                label={saving ? "..." : inCollection ? "Retirer de ma collection" : "Ajouter à ma collection"}
+                variant={inCollection ? "secondary" : "primary"}
+                onPress={onToggle}
+                disabled={saving}
+              />
+            </View>
+          </>
+        ) : null}
 
-    shadowColor: colors.shadow as any,
 
-    shadowOpacity: 0.14,
+      </View>
 
-    shadowRadius: 12,
 
-    shadowOffset: { width: 0, height: 8 },
+      <Modal visible={viewerVisible} transparent animationType="fade" onRequestClose={() => setViewerVisible(false)}>
 
-    elevation: 2,
 
-  },
+      <View style={styles.viewerOverlay}>
 
-
 
-  title: {
+        <FlatList
 
-    fontSize: 22,
 
-    fontWeight: "900",
+          horizontal
 
-    color: colors.text,
 
-    textAlign: "center",
+          pagingEnabled
 
-  },
 
-  brand: {
+          data={imageUrls}
 
-    marginTop: spacing.xs,
 
-    color: colors.muted,
+          keyExtractor={(u, i) => u + String(i)}
 
-    textAlign: "center",
 
-    fontWeight: "700",
+          initialScrollIndex={viewerIndex}
 
-  },
 
-
+          getItemLayout={(data, index) => { const width = Dimensions.get("window").width; return { length: width, offset: width * index, index }; }}
 
-  section: { marginTop: spacing.lg },
 
-  sectionTitle: { fontSize: 14, fontWeight: "900", color: colors.text, marginBottom: spacing.xs },
+          renderItem={({ item }) => (
 
-  description: { color: colors.text, lineHeight: 20 },
 
-  muted: { color: colors.muted, lineHeight: 20 },
+            <View style={{ width: Dimensions.get("window").width, height: Dimensions.get("window").height, alignItems: "center", justifyContent: "center", backgroundColor: "black" }}>
 
-
 
-  center: { flex: 1, alignItems: "center", justifyContent: "center", gap: 10, padding: spacing.lg },
+              <Image source={{ uri: item }} style={{ width: "100%", height: "100%" }} resizeMode="contain" />
 
-  centerText: { color: colors.muted },
 
-  errorText: { color: colors.dangerText, fontWeight: "900", textAlign: "center" },
+            </View>
+
+
+          )}
+
+
+        />
+
+
+        <Pressable onPress={() => setViewerVisible(false)} style={styles.viewerClose} hitSlop={10}>
+
+
+          <Text style={styles.viewerCloseText}>×</Text>
+
+
+        </Pressable>
+
+
+      </View>
+
+
+    </Modal>
+
+
+    </ScrollView>
+
+
+  );
+
+
+}
+
+
+
+
+
+const styles = StyleSheet.create({
+
+
+  container: { flex: 1, backgroundColor: colors.bg },
+
+
+
+
+
+  topBar: {
+
+
+    paddingTop: spacing.xl,
+
+
+    paddingHorizontal: spacing.lg,
+
+
+    paddingBottom: spacing.md,
+
+
+    flexDirection: "row",
+
+
+    alignItems: "center",
+
+
+    justifyContent: "space-between",
+
+
+  },
+
+
+  backBtn: {
+
+
+    width: 40,
+
+
+    height: 40,
+
+
+    borderRadius: 12,
+
+
+    backgroundColor: colors.card,
+
+
+    borderWidth: 1,
+
+
+    borderColor: colors.border,
+
+
+    alignItems: "center",
+
+
+    justifyContent: "center",
+
+
+    shadowColor: colors.shadow as any,
+
+
+    shadowOpacity: 0.15,
+
+
+    shadowRadius: 10,
+
+
+    shadowOffset: { width: 0, height: 6 },
+
+
+    elevation: 2,
+
+
+  },
+
+
+  backText: { fontSize: 26, fontWeight: "900", color: colors.text, marginTop: -2 },
+
+
+  topTitle: { fontSize: 16, fontWeight: "900", color: colors.text },
+
+
+
+
+
+  imageWrap: {
+
+
+    marginHorizontal: spacing.lg,
+
+
+    borderRadius: 18,
+
+
+    overflow: "hidden",
+
+
+    borderWidth: 1,
+
+
+    borderColor: colors.border,
+
+
+    backgroundColor: colors.card,
+
+
+    shadowColor: colors.shadow as any,
+
+
+    shadowOpacity: 0.22,
+
+
+    shadowRadius: 14,
+
+
+    shadowOffset: { width: 0, height: 10 },
+
+
+    elevation: 4,
+
+
+    position: "relative",
+
+
+  },
+
+
+  image: { width: "100%", height: 260, backgroundColor: colors.card },
+
+
+  imagePlaceholder: {
+
+
+    height: 260,
+
+
+    alignItems: "center",
+
+
+    justifyContent: "center",
+
+
+    gap: 6,
+
+
+    backgroundColor: colors.bg2,
+
+
+  },
+
+
+  imageEmoji: { fontSize: 44 },
+
+
+
+
+
+  badge: {
+
+
+    position: "absolute",
+
+
+    left: spacing.md,
+
+
+    bottom: spacing.md,
+
+
+    backgroundColor: colors.badgeBg,
+
+
+    paddingHorizontal: 12,
+
+
+    paddingVertical: 6,
+
+
+    borderRadius: 999,
+
+
+  },
+
+
+  badgeText: { color: colors.badgeText, fontWeight: "900", fontSize: 12 },
+
+
+
+
+
+  paper: {
+
+
+    marginTop: spacing.lg,
+
+
+    marginHorizontal: spacing.lg,
+
+
+    padding: spacing.lg,
+
+
+    borderRadius: 18,
+
+
+    backgroundColor: colors.card,
+
+
+    borderWidth: 1,
+
+
+    borderColor: colors.border,
+
+
+    shadowColor: colors.shadow as any,
+
+
+    shadowOpacity: 0.14,
+
+
+    shadowRadius: 12,
+
+
+    shadowOffset: { width: 0, height: 8 },
+
+
+    elevation: 2,
+
+
+  },
+
+
+
+
+
+  title: {
+
+
+    fontSize: 22,
+
+
+    fontWeight: "900",
+
+
+    color: colors.text,
+
+
+    textAlign: "center",
+
+
+  },
+
+
+  brand: {
+
+
+    marginTop: spacing.xs,
+
+
+    color: colors.muted,
+
+
+    textAlign: "center",
+
+
+    fontWeight: "700",
+
+
+  },
+
+
+
+
+
+  section: { marginTop: spacing.lg },
+
+
+  sectionTitle: { fontSize: 14, fontWeight: "900", color: colors.text, marginBottom: spacing.xs },
+
+
+  description: { color: colors.text, lineHeight: 20 },
+
+
+  muted: { color: colors.muted, lineHeight: 20 },
+
+
+
+
+
+  center: { flex: 1, alignItems: "center", justifyContent: "center", gap: 10, padding: spacing.lg },
+
+
+  centerText: { color: colors.muted },
+
+
+  errorText: { color: colors.dangerText, fontWeight: "900", textAlign: "center" },
+
 
   retry: { color: colors.primaryDark, fontWeight: "900" },
   viewerOverlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.95)", alignItems: "center", justifyContent: "center" },
   viewerClose: { position: "absolute", top: spacing.xl, right: spacing.xl, width: 36, height: 36, borderRadius: 18, backgroundColor: "rgba(255,255,255,0.9)", alignItems: "center", justifyContent: "center" },
   viewerCloseText: { color: "#000", fontSize: 22, fontWeight: "900", marginTop: -2 },
-});
+});
 
-
 
-
 
-
 
-
 
-
 
-
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

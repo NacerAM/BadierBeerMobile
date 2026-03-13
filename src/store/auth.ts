@@ -1,4 +1,4 @@
-import AsyncStorage from "@react-native-async-storage/async-storage";
+﻿import AsyncStorage from "@react-native-async-storage/async-storage";
 
 export type AuthUser = {
   id: number;
@@ -6,6 +6,7 @@ export type AuthUser = {
   email: string;
   role: string;
   avatarUrl?: string | null;
+  bio?: string | null;
 };
 
 type AuthState = {
@@ -80,5 +81,9 @@ export const auth = {
     notify();
   },
 };
+
+
+
+
 
 

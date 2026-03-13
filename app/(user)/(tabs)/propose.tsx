@@ -1,5 +1,5 @@
 ﻿import React, { useState } from "react";
-import { Text, StyleSheet, ScrollView, Alert, View, Pressable } from "react-native";
+import { Text, StyleSheet, ScrollView, Alert, View, Pressable, Platform, ToastAndroid } from "react-native";
 import { router } from "expo-router";
 import { Image, Modal, FlatList, Dimensions } from "react-native";
 import Input from "../../../src/components/Input";
@@ -8,6 +8,8 @@ import { proposeGlassApi } from "../../../src/api/proposalsApi";
 import { colors } from "../../../src/theme/colors";
 import { spacing } from "../../../src/theme/spacing";
 import { typography } from "../../../src/theme/typography";
+
+function showToast(msg: string) { if (Platform.OS === 'android') ToastAndroid.show(msg, ToastAndroid.SHORT); else Alert.alert("Info", msg); }
 
 export default function ProposeScreen() {
   const [name, setName] = useState("");
@@ -78,7 +80,7 @@ export default function ProposeScreen() {
         imageUrls: urls,
       });
 
-      Alert.alert("Envoyé ?", "Votre proposition a été envoyée pour validation.");
+      showToast('Votre proposition a été envoyée pour validation.');
       setName("");
       setManufacturerName("");
       setDescription("");
@@ -181,6 +183,7 @@ const styles = StyleSheet.create({
   viewerClose: { position: "absolute", top: spacing.xl, right: spacing.xl, width: 36, height: 36, borderRadius: 18, backgroundColor: "rgba(255,255,255,0.9)", alignItems: "center", justifyContent: "center" },
   viewerCloseText: { color: "#000", fontSize: 22, fontWeight: "900", marginTop: -2 },
 });
+
 
 
 

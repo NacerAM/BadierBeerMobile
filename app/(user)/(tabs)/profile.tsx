@@ -36,6 +36,7 @@ export default function Profile() {
         </View>
         <Text style={styles.name}>{user?.username || "Utilisateur"}</Text>
         <Text style={styles.email}>{user?.email || "—"}</Text>
+        {(user as any)?.bio ? (<Text style={{ marginTop: spacing.sm, color: colors.text, textAlign: "center" }}>{(user as any).bio}</Text>) : null}
         <View style={{ marginTop: spacing.sm }}>
           <Button label="Éditer" variant="secondary" onPress={() => router.push("/(user)/(tabs)/edit-profile" as any)} />
         </View>

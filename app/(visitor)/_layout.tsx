@@ -47,6 +47,7 @@ export default function VisitorTabsLayout() {
       <Tabs.Screen name="register" options={{ href: null }} />
       <Tabs.Screen name="forgot-password" options={{ href: null }} />
       <Tabs.Screen name="glass/[id]" options={{ href: null }} />
+      <Tabs.Screen name="profile/[id]" options={{ href: null }} />
     </Tabs>
   );
 }

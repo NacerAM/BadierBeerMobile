@@ -100,6 +100,13 @@ export default function GlassDetailVisitorScreen() {
       <View style={styles.paper}>
         <Text style={styles.title}>{glass.name}</Text>
         <Text style={styles.brand}>{glass.Manufacturer?.name || '—'}</Text>
+        <View style={{ marginTop: spacing.sm, flexDirection: "row", justifyContent: "center" }}>
+          {glass?.createdBy ? (
+            <Pressable onPress={() => router.push({ pathname: "/(visitor)/profile/[id]", params: { id: String(glass.createdBy.id) } } as any)} hitSlop={10}>
+              <Text style={{ color: colors.primaryDark, fontWeight: "900" }}>Ajouté par @{glass.createdBy.username}</Text>
+            </Pressable>
+          ) : null}
+        </View>
 
         {/* Rating section */}
         <View style={[styles.section, { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }]}>
@@ -122,18 +129,11 @@ export default function GlassDetailVisitorScreen() {
         ) : null}
 
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Accès</Text>
-          <Text style={styles.muted}>Connectez-vous pour ajouter ce verre à votre collection et proposer de nouveaux verres.</Text>
-        </View>
-
-        <View style={{ marginTop: spacing.lg }}>
-          <Button label="Se connecter pour ajouter à ma collection" onPress={() => router.push("/(visitor)/login" as any)} />
-        </View>
-
         <View style={{ marginTop: spacing.sm }}>
           <Button label="Créer un compte" variant="secondary" onPress={() => router.push("/(visitor)/register" as any)} />
         </View>
       </View>
+        </View>
 
           </ScrollView>
   );

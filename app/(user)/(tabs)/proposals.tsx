@@ -1,8 +1,9 @@
 ﻿import React, { useCallback, useState } from "react";
-import { View, Text, StyleSheet, FlatList, ActivityIndicator, Pressable } from "react-native";
+import { View, Text, StyleSheet, FlatList, ActivityIndicator, Pressable, Platform, ToastAndroid, Alert } from "react-native";
 import { useFocusEffect } from "@react-navigation/native";
 import { router } from "expo-router";
 import Ionicons from "@expo/vector-icons/Ionicons";
+import { useCollection } from "../../../src/store/useCollection";
 import { listMyProposalsApi, deleteMyProposalApi } from "../../../src/api/proposalsApi";
 import { colors } from "../../../src/theme/colors";
 import { spacing } from "../../../src/theme/spacing";
@@ -10,9 +11,10 @@ import { typography } from "../../../src/theme/typography";
 
 import Button from "../../../src/components/Button";
 import Input from "../../../src/components/Input";
+function showToast(msg: string) { if (Platform.OS === "android") ToastAndroid.show(msg, ToastAndroid.SHORT); else Alert.alert("Info", msg); }
 function badge(status?: string) {
-  if (status === "VALIDE") return { bg: colors.successBg, text: colors.successText, label: "ValidÃ©" };
-  if (status === "REJETE") return { bg: colors.dangerBg, text: colors.dangerText, label: "RejetÃ©" };
+  if (status === "VALIDE") return { bg: colors.successBg, text: colors.successText, label: "Validé" };
+  if (status === "REJETE") return { bg: colors.dangerBg, text: colors.dangerText, label: "Rejeté" };
   return { bg: colors.warningBg, text: colors.warningText, label: "En attente" };
 }
 
@@ -24,6 +26,8 @@ export default function ProposalsScreen() {
   const [deleting, setDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const { has, toggle, refresh } = useCollection();
+  const [savingId, setSavingId] = useState<number | null>(null);
 
   async function load() {
     try {
@@ -58,8 +62,8 @@ export default function ProposalsScreen() {
   useFocusEffect(
     useCallback(() => {
       load();
-    }, [])
-  );
+      refresh();
+    }, [refresh]));
 
   return (
     <View style={styles.container}>
@@ -74,13 +78,13 @@ export default function ProposalsScreen() {
       {loading ? (
         <View style={styles.center}>
           <ActivityIndicator />
-          <Text style={styles.muted}>Chargementâ€¦</Text>
+          <Text style={styles.muted}>Chargement…</Text>
         </View>
       ) : error ? (
         <View style={styles.center}>
           <Text style={styles.error}>{error}</Text>
           <Text style={styles.retry} onPress={load}>
-            RÃ©essayer
+            Réessayer
           </Text>
         </View>
       ) : (
@@ -102,28 +106,47 @@ export default function ProposalsScreen() {
                   </View>
                 </View>
 
-                <Text style={styles.cardSubtitle}>{item.Manufacturer?.name || "â€”"}</Text>
+                <Text style={styles.cardSubtitle}>{item.Manufacturer?.name || "—"}</Text>
 
                 {item.description ? <Text style={styles.desc}>{item.description}</Text> : null}
 
                 {item.status === "REJETE" && item.rejectReason ? (
                   <Text style={styles.reject}>Raison : {item.rejectReason}</Text>
                 ) : null}
-                {item.status === "EN_ATTENTE" ? (
-                  showForId === item.id ? (
-                    <View style={{ marginTop: spacing.sm, gap: spacing.sm }}>
-                      {deleteError ? <Text style={{ color: colors.dangerText, fontWeight: "800" }}>{deleteError}</Text> : null}
-                      <Input label="Mot de passe" value={password} onChangeText={setPassword} secureTextEntry />
-                      <View style={{ flexDirection: "row", justifyContent: "flex-end", gap: 8 }}>
-                        <Button label="Annuler" variant="secondary" onPress={() => { setShowForId(null); setPassword(""); setDeleteError(null); }} />
-                        <Button label={deleting ? "Suppression..." : "Confirmer"} onPress={() => onDelete(item.id)} disabled={deleting || !password.trim()} />
-                      </View>
-                    </View>
-                  ) : (
-                    <View style={{ marginTop: spacing.sm, flexDirection: "row", justifyContent: "flex-end" }}>
-                      <Text onPress={() => setShowForId(item.id)} style={{ color: colors.dangerText, fontWeight: "800" }}>Supprimer</Text>
-                    </View>
-                  )
+                {item.status === "EN_ATTENTE" && (
+  showForId === item.id ? (
+    <View style={{ marginTop: spacing.sm, gap: spacing.sm }}>
+      {deleteError ? <Text style={{ color: colors.dangerText, fontWeight: "800" }}>{deleteError}</Text> : null}
+      <Input label="Mot de passe" value={password} onChangeText={setPassword} secureTextEntry />
+      <View style={{ flexDirection: "row", justifyContent: "flex-end", gap: 8 }}>
+        <Button label="Annuler" variant="secondary" onPress={() => { setShowForId(null); setPassword(""); setDeleteError(null); }} />
+        <Button label={deleting ? "Suppression..." : "Confirmer"} onPress={() => onDelete(item.id)} disabled={deleting || !password.trim()} />
+      </View>
+    </View>
+  ) : (
+    <View style={{ marginTop: spacing.sm, flexDirection: "row", justifyContent: "flex-end" }}>
+      <Text onPress={() => setShowForId(item.id)} style={{ color: colors.dangerText, fontWeight: "800" }}>Supprimer</Text>
+    </View>
+  )
+)}
+                  {item.status === "VALIDE" ? (
+                  <View style={{ marginTop: spacing.sm, flexDirection: 'row', justifyContent: 'flex-end' }}>
+                    <Button
+                      label={savingId === item.id ? "..." : (has(item.id) ? "Retirer de ma collection" : "Ajouter à ma collection")}
+                      variant={has(item.id) ? "secondary" : "primary"}
+                      disabled={!!savingId}
+                      onPress={async () => {
+                        try {
+                          setSavingId(item.id);
+                          await toggle(item.id);
+                          showToast(has(item.id) ? "Retiré de votre collection" : "Ajouté à votre collection");
+                          await refresh();
+                        } finally {
+                          setSavingId(null);
+                        }
+                      }}
+                    />
+                  </View>
                 ) : null}
               </View>
             );
@@ -156,6 +179,19 @@ const styles = StyleSheet.create({
   badgeText: { fontSize: 12, fontWeight: "800" },
   reject: { marginTop: 8, color: colors.dangerText, fontWeight: "800" },
 });
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
