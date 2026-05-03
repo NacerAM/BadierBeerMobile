@@ -9,55 +9,56 @@ export default function UserTabsLayout() {
         headerShown: false,
         tabBarActiveTintColor: colors.primaryDark,
         tabBarInactiveTintColor: colors.muted,
-        tabBarLabelStyle: { fontWeight: '700' },
+        tabBarLabelStyle: { fontWeight: "700" },
         tabBarStyle: { backgroundColor: colors.card, borderTopColor: colors.border, borderTopWidth: 1 },
       }}
     >
-      {/* Visible tabs */}
       <Tabs.Screen
         name="index"
         options={{
-          title: 'Accueil',
+          title: "Accueil",
           tabBarIcon: ({ color, size, focused }) => (
-            <Ionicons name={focused ? 'home' : 'home-outline'} color={color} size={size ?? 22} />
+            <Ionicons name={focused ? "home" : "home-outline"} color={color} size={size ?? 22} />
           ),
         }}
       />
       <Tabs.Screen
         name="catalogue"
         options={{
-          title: 'Catalogue',
+          title: "Catalogue",
           tabBarIcon: ({ color, size, focused }) => (
-            <Ionicons name={focused ? 'albums' : 'albums-outline'} color={color} size={size ?? 22} />
+            <Ionicons name={focused ? "albums" : "albums-outline"} color={color} size={size ?? 22} />
           ),
         }}
       />
       <Tabs.Screen
         name="messages"
         options={{
-          title: 'Messagerie',
+          title: "Messagerie",
           tabBarIcon: ({ color, size, focused }) => (
-            <Ionicons name={focused ? 'chatbubbles' : 'chatbubbles-outline'} color={color} size={size ?? 22} />
+            <Ionicons name={focused ? "chatbubbles" : "chatbubbles-outline"} color={color} size={size ?? 22} />
           ),
         }}
       />
       <Tabs.Screen
         name="explore"
         options={{
-          title: 'Explorer',
+          title: "Explorer",
           tabBarIcon: ({ color, size, focused }) => (
-            <Ionicons name={focused ? 'compass' : 'compass-outline'} color={color} size={size ?? 22} />
+            <Ionicons name={focused ? "compass" : "compass-outline"} color={color} size={size ?? 22} />
           ),
         }}
       />
 
-      {/* Hidden tabs (accessibles par navigation mais pas affichées) */}
       <Tabs.Screen name="collection" options={{ href: null }} />
       <Tabs.Screen name="propose" options={{ href: null }} />
       <Tabs.Screen name="proposals" options={{ href: null }} />
       <Tabs.Screen name="profile" options={{ href: null }} />
       <Tabs.Screen name="edit-profile" options={{ href: null }} />
       <Tabs.Screen name="settings" options={{ href: null }} />
+      <Tabs.Screen name="brewer" options={{ href: null }} />
+      <Tabs.Screen name="brewer-products" options={{ href: null }} />
+      <Tabs.Screen name="brewer-events" options={{ href: null }} />
     </Tabs>
   );
 }

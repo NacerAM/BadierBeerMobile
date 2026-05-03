@@ -1,4 +1,4 @@
-﻿import React, { useEffect, useMemo, useState } from "react";
+﻿import React, { useEffect, useState } from "react";
 import { useAuth } from "../../../src/store/useAuth";
 import { View, Text, StyleSheet, Image, ScrollView, Pressable } from "react-native";
 import { router } from "expo-router";
@@ -12,6 +12,7 @@ export default function UserHomeScreen() {
   const { user } = useAuth();
   const [items, setItems] = useState<Glass[]>([]);
   const [loading, setLoading] = useState(true);
+  const isBrewer = user?.role === "BREWER";
 
   useEffect(() => {
     async function load() {
@@ -28,14 +29,11 @@ export default function UserHomeScreen() {
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      {/* Header */}
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Badier Beer</Text>
-
         <View style={{ width: 40 }} />
       </View>
 
-      {/* Hero image */}
       <View style={styles.heroImageWrap}>
         <Image
           source={require("../../../assets/images/hero-beer.jpg")}
@@ -44,7 +42,6 @@ export default function UserHomeScreen() {
         />
       </View>
 
-      {/* Hero text block */}
       <View style={styles.paperBlock}>
         <Text style={styles.heroTitle}>Bonjour {user?.username ?? "!"}</Text>
         <Text style={styles.heroSubtitle}>
@@ -52,10 +49,7 @@ export default function UserHomeScreen() {
         </Text>
 
         <View style={{ marginTop: spacing.lg }}>
-          <Button
-            label="Ma collection"
-            onPress={() => router.push("/(user)/(tabs)/collection" as any)}
-          />
+          <Button label="Ma collection" onPress={() => router.push("/(user)/(tabs)/collection" as any)} />
         </View>
 
         <View style={styles.secondaryActions}>
@@ -72,9 +66,17 @@ export default function UserHomeScreen() {
             onPress={() => router.push("/(user)/(tabs)/propose" as any)}
           />
         </View>
+        {isBrewer ? (
+          <View style={{ marginTop: spacing.sm }}>
+            <Button
+              label="Espace brasseur"
+              variant="secondary"
+              onPress={() => router.push("/(user)/(tabs)/brewer" as any)}
+            />
+          </View>
+        ) : null}
       </View>
 
-      {/* Derniers verres validés */}
       <View style={styles.sectionHeader}>
         <Text style={styles.sectionTitle}>Derniers meilleurs verres validés</Text>
         <Pressable onPress={() => router.push("/(user)/(tabs)/catalogue" as any)} hitSlop={10}>
@@ -82,7 +84,7 @@ export default function UserHomeScreen() {
         </Pressable>
       </View>
 
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.cardsRow}>
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.cardsRow}>
         {items.map((g) => (
           <Pressable
             key={g.id}
@@ -90,7 +92,7 @@ export default function UserHomeScreen() {
             onPress={() => router.push({ pathname: "/(user)/glass/[id]", params: { id: String(g.id) } } as any)}
           >
             {(g.images && g.images.length) ? (
-              <Image source={{ uri: (g.images.find(i=>i.isPrimary)||g.images[0]).url }} style={{ width: 140, height: 110, borderRadius: 12 }} />
+              <Image source={{ uri: (g.images.find(i => i.isPrimary) || g.images[0]).url }} style={{ width: 140, height: 110, borderRadius: 12 }} />
             ) : (
               <View style={styles.cardImagePlaceholder}>
                 <Text style={{ color: colors.muted, fontSize: 28 }}>🍺</Text>
@@ -106,7 +108,7 @@ export default function UserHomeScreen() {
           </Pressable>
         ))}
         {items.length === 0 && !loading ? (
-          <View style={[styles.card, { alignItems: 'center', justifyContent: 'center' }]}>
+          <View style={[styles.card, { alignItems: "center", justifyContent: "center" }]}>
             <Text style={styles.cardSub}>Aucun verre à afficher</Text>
           </View>
         ) : null}
@@ -118,7 +120,6 @@ export default function UserHomeScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.bg },
   content: { paddingBottom: spacing.xxl },
-
   header: {
     paddingTop: spacing.xl,
     paddingHorizontal: spacing.lg,
@@ -133,26 +134,6 @@ const styles = StyleSheet.create({
     color: colors.text,
     letterSpacing: 0.3,
   },
-  headerIcon: {
-    position: "absolute",
-    right: spacing.lg,
-    top: spacing.xl,
-    width: 40,
-    height: 40,
-    borderRadius: 12,
-    backgroundColor: colors.card,
-    borderWidth: 1,
-    borderColor: colors.border,
-    alignItems: "center",
-    justifyContent: "center",
-    shadowColor: colors.shadow as any,
-    shadowOpacity: 0.25,
-    shadowRadius: 10,
-    shadowOffset: { width: 0, height: 6 },
-    elevation: 4,
-  },
-  headerIconText: { fontSize: 18 }, headerAvatar: { width: 36, height: 36, borderRadius: 10 },
-
   heroImageWrap: {
     marginHorizontal: spacing.lg,
     borderRadius: 18,
@@ -167,7 +148,6 @@ const styles = StyleSheet.create({
     elevation: 5,
   },
   heroImage: { width: "100%", height: 210 },
-
   paperBlock: {
     marginTop: spacing.lg,
     marginHorizontal: spacing.lg,
@@ -182,7 +162,6 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 8 },
     elevation: 3,
   },
-
   heroTitle: {
     fontSize: 22,
     fontWeight: "900",
@@ -196,12 +175,7 @@ const styles = StyleSheet.create({
     textAlign: "center",
     lineHeight: 20,
   },
-
-  secondaryActions: {
-    marginTop: spacing.lg,
-    gap: spacing.sm,
-  },
-
+  secondaryActions: { marginTop: spacing.lg, gap: spacing.sm },
   sectionHeader: {
     marginTop: spacing.xl,
     marginHorizontal: spacing.lg,
@@ -214,17 +188,8 @@ const styles = StyleSheet.create({
     fontWeight: "900",
     color: colors.text,
   },
-  sectionLink: {
-    fontSize: 26,
-    color: colors.muted,
-    fontWeight: "900",
-  },
-
-  cardsRow: {
-    paddingHorizontal: spacing.lg,
-    paddingTop: spacing.md,
-    gap: spacing.md,
-  },
+  sectionLink: { fontSize: 26, color: colors.muted, fontWeight: "900" },
+  cardsRow: { paddingHorizontal: spacing.lg, paddingTop: spacing.md, gap: spacing.md },
   card: {
     width: 160,
     borderRadius: 16,
@@ -258,21 +223,6 @@ const styles = StyleSheet.create({
     borderRadius: 999,
   },
   badgeText: { color: colors.badgeText, fontWeight: "900", fontSize: 12 },
-
   cardTitle: { fontWeight: "900", color: colors.text, marginTop: 6 },
   cardSub: { color: colors.muted, marginTop: 2, fontSize: 12 },
 });
-
-
-
-
-
-
-
-
-
-
-
-
-
-
