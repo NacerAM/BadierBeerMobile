@@ -1,4 +1,4 @@
-﻿import React, { useState } from "react";
+﻿import React, { useEffect, useState } from "react";
 import { View, Text, StyleSheet, Pressable, ScrollView, Image, Modal } from "react-native";
 import { colors } from "../../../src/theme/colors";
 import { spacing } from "../../../src/theme/spacing";
@@ -7,15 +7,25 @@ import Button from "../../../src/components/Button";
 import { useAuth } from "../../../src/store/useAuth";
 import { router } from "expo-router";
 import Ionicons from "@expo/vector-icons/Ionicons";
+import { getMyStatsApi, MyStats } from "../../../src/api/usersApi";
 
 export default function Profile() {
   const { user, logout } = useAuth();
   const [viewerVisible, setViewerVisible] = useState(false);
+  const [stats, setStats] = useState<MyStats | null>(null);
   const isBrewer = user?.role === "BREWER";
+
+  useEffect(() => {
+    getMyStatsApi().then(setStats).catch(() => setStats(null));
+  }, []);
 
   async function onLogout() {
     await logout();
     router.replace("/(visitor)/" as any);
+  }
+
+  function formatRating(value: number | null | undefined) {
+    return value != null ? `${value.toFixed(2)}/5` : "—";
   }
 
   return (
@@ -45,8 +55,20 @@ export default function Profile() {
 
       <View style={styles.item}>
         <Text style={styles.itemTitle}>Mes statistiques</Text>
-        <Text style={styles.itemSub}>Merci pour votre proposition ! Nous étudions…</Text>
-        <Text style={styles.itemArrow}>›</Text>
+        <View style={styles.statsRow}>
+          <View style={styles.statBox}>
+            <Text style={styles.statValue}>{formatRating(stats?.averageRating)}</Text>
+            <Text style={styles.statLabel}>Note moyenne</Text>
+          </View>
+          <View style={styles.statBox}>
+            <Text style={styles.statValue}>{formatRating(stats?.bestRating)}</Text>
+            <Text style={styles.statLabel}>Meilleure note</Text>
+          </View>
+          <View style={styles.statBox}>
+            <Text style={styles.statValue}>{stats?.totalPublications ?? 0}</Text>
+            <Text style={styles.statLabel}>Publications</Text>
+          </View>
+        </View>
       </View>
 
       <Pressable style={styles.item} onPress={() => router.push("/(user)/(tabs)/proposals" as any)}>
@@ -128,6 +150,10 @@ const styles = StyleSheet.create({
   itemTitle: { fontWeight: "900", color: colors.text },
   itemSub: { color: colors.muted, marginTop: 2 },
   itemArrow: { position: "absolute", right: spacing.md, top: "50%", marginTop: -14, fontSize: 26, color: colors.muted, fontWeight: "900" },
+  statsRow: { flexDirection: "row", gap: spacing.sm, marginTop: spacing.md },
+  statBox: { flex: 1, backgroundColor: colors.bg2, borderRadius: 14, paddingVertical: spacing.md, paddingHorizontal: spacing.sm, alignItems: "center" },
+  statValue: { color: colors.text, fontWeight: "900", fontSize: 18 },
+  statLabel: { color: colors.muted, marginTop: 4, fontSize: 12, textAlign: "center" },
   viewerOverlay: { flex: 1, backgroundColor: "black", alignItems: "center", justifyContent: "center" },
   viewerImage: { width: "100%", height: "100%" },
   viewerClose: { position: "absolute", top: 40, right: 16, zIndex: 5, elevation: 5 },

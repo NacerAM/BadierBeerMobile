@@ -1,115 +1,159 @@
-import { Image } from 'expo-image';
-import { Platform, StyleSheet } from 'react-native';
-import { colors } from '../../../src/theme/colors';
+﻿import React, { useCallback, useEffect, useMemo, useState } from "react";
+import { View, Text, StyleSheet, FlatList, Pressable, TextInput, ActivityIndicator, Image } from "react-native";
+import { useFocusEffect } from "@react-navigation/native";
+import { colors } from "../../../src/theme/colors";
+import { spacing } from "../../../src/theme/spacing";
+import { typography } from "../../../src/theme/typography";
+import {
+  listPublicProductsApi,
+  listUpcomingEventsApi,
+  PublicBreweryEvent,
+  PublicBreweryProduct,
+} from "../../../src/api/publicContentApi";
 
-import { Collapsible } from '@/components/ui/collapsible';
-import { ExternalLink } from '@/components/external-link';
-import ParallaxScrollView from '@/components/parallax-scroll-view';
-import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
-import { IconSymbol } from '@/components/ui/icon-symbol';
-import { Fonts } from '@/constants/theme';
+type ExploreMode = "events" | "products";
 
-export default function TabTwoScreen() {
+export default function ExploreScreen() {
+  const [mode, setMode] = useState<ExploreMode>("events");
+  const [q, setQ] = useState("");
+  const [products, setProducts] = useState<PublicBreweryProduct[]>([]);
+  const [events, setEvents] = useState<PublicBreweryEvent[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const load = useCallback(async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const [productsRes, eventsRes] = await Promise.all([
+        listPublicProductsApi(),
+        listUpcomingEventsApi(),
+      ]);
+      setProducts(productsRes.items ?? []);
+      setEvents(eventsRes.items ?? []);
+    } catch (e: any) {
+      setError(e?.message || "Erreur réseau");
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => { load(); }, [load]);
+  useFocusEffect(useCallback(() => { load(); }, [load]));
+
+  const filteredProducts = useMemo(() => {
+    const query = q.trim().toLowerCase();
+    if (!query) return products;
+    return products.filter((item) =>
+      item.name.toLowerCase().includes(query) ||
+      (item.Manufacturer?.name || "").toLowerCase().includes(query) ||
+      (item.description || "").toLowerCase().includes(query)
+    );
+  }, [q, products]);
+
+  const filteredEvents = useMemo(() => {
+    const query = q.trim().toLowerCase();
+    if (!query) return events;
+    return events.filter((item) =>
+      item.title.toLowerCase().includes(query) ||
+      (item.Manufacturer?.name || "").toLowerCase().includes(query) ||
+      item.content.toLowerCase().includes(query)
+    );
+  }, [q, events]);
+
+  function formatDate(value?: string | null) {
+    if (!value) return "Date à confirmer";
+    const d = new Date(value);
+    if (Number.isNaN(d.getTime())) return "Date à confirmer";
+    return d.toLocaleDateString("fr-BE", { day: "2-digit", month: "long", year: "numeric" });
+  }
+
+  const data = mode === "events" ? filteredEvents : filteredProducts;
+
   return (
-    <ParallaxScrollView
-      headerBackgroundColor={{ light: colors.card as any, dark: colors.card as any }}
-      headerImage={
-        <IconSymbol
-          size={310}
-          color={colors.muted as any}
-          name="chevron.left.forwardslash.chevron.right"
-          style={styles.headerImage}
+    <View style={styles.container}>
+      <Text style={styles.title}>Explorer</Text>
+      <Text style={styles.subtitle}>Consultez les événements à venir et les produits mis en vente par les brasseries.</Text>
+
+      <View style={styles.segmentWrap}>
+        <Pressable onPress={() => setMode("events")} style={[styles.segment, mode === "events" ? styles.segmentActive : null]}>
+          <Text style={[styles.segmentText, mode === "events" ? styles.segmentTextActive : null]}>Événements</Text>
+        </Pressable>
+        <Pressable onPress={() => setMode("products")} style={[styles.segment, mode === "products" ? styles.segmentActive : null]}>
+          <Text style={[styles.segmentText, mode === "products" ? styles.segmentTextActive : null]}>Produits</Text>
+        </Pressable>
+      </View>
+
+      <View style={styles.searchWrap}>
+        <Text style={styles.searchIcon}>🔎</Text>
+        <TextInput
+          value={q}
+          onChangeText={setQ}
+          placeholder={mode === "events" ? "Rechercher un événement…" : "Rechercher un produit…"}
+          placeholderTextColor={colors.muted}
+          style={styles.search}
+          autoCapitalize="none"
         />
-      }>
-      <ThemedView style={styles.titleContainer}>
-        <ThemedText
-          type="title"
-          style={{
-            fontFamily: Fonts.rounded,
-          }}>
-          Explore
-        </ThemedText>
-      </ThemedView>
-      <ThemedText>This app includes example code to help you get started.</ThemedText>
-      <Collapsible title="File-based routing">
-        <ThemedText>
-          This app has two screens:{' '}
-          <ThemedText type="defaultSemiBold">app/(tabs)/index.tsx</ThemedText> and{' '}
-          <ThemedText type="defaultSemiBold">app/(tabs)/explore.tsx</ThemedText>
-        </ThemedText>
-        <ThemedText>
-          The layout file in <ThemedText type="defaultSemiBold">app/(tabs)/_layout.tsx</ThemedText>{' '}
-          sets up the tab navigator.
-        </ThemedText>
-        <ExternalLink href="https://docs.expo.dev/router/introduction">
-          <ThemedText type="link">Learn more</ThemedText>
-        </ExternalLink>
-      </Collapsible>
-      <Collapsible title="Android, iOS, and web support">
-        <ThemedText>
-          You can open this project on Android, iOS, and the web. To open the web version, press{' '}
-          <ThemedText type="defaultSemiBold">w</ThemedText> in the terminal running this project.
-        </ThemedText>
-      </Collapsible>
-      <Collapsible title="Images">
-        <ThemedText>
-          For static images, you can use the <ThemedText type="defaultSemiBold">@2x</ThemedText> and{' '}
-          <ThemedText type="defaultSemiBold">@3x</ThemedText> suffixes to provide files for
-          different screen densities
-        </ThemedText>
-        <Image
-          source={require('@/assets/images/react-logo.png')}
-          style={{ width: 100, height: 100, alignSelf: 'center' }}
+      </View>
+
+      {loading ? (
+        <View style={styles.center}><ActivityIndicator /><Text style={styles.centerText}>Chargement…</Text></View>
+      ) : error ? (
+        <View style={styles.center}><Text style={styles.errorText}>{error}</Text><Text style={styles.retry} onPress={load}>Réessayer</Text></View>
+      ) : (
+        <FlatList
+          data={data}
+          keyExtractor={(item) => String(item.id)}
+          contentContainerStyle={styles.list}
+          renderItem={({ item }) => mode === "events" ? (
+            <View style={styles.card}>
+              {(item as PublicBreweryEvent).imageUrl ? (
+                <Image source={{ uri: (item as PublicBreweryEvent).imageUrl! }} style={styles.cardImage} resizeMode="cover" />
+              ) : null}
+              <Text style={styles.cardTitle}>{(item as PublicBreweryEvent).title}</Text>
+              <Text style={styles.cardMeta}>{formatDate((item as PublicBreweryEvent).publishedAt)} · {(item as PublicBreweryEvent).Manufacturer?.name || "Brasserie"}</Text>
+              <Text style={styles.cardText}>{(item as PublicBreweryEvent).content}</Text>
+            </View>
+          ) : (
+            <View style={styles.card}>
+              {(item as PublicBreweryProduct).imageUrl ? (
+                <Image source={{ uri: (item as PublicBreweryProduct).imageUrl! }} style={styles.cardImage} resizeMode="cover" />
+              ) : null}
+              <Text style={styles.cardTitle}>{(item as PublicBreweryProduct).name}</Text>
+              <Text style={styles.cardMeta}>{(item as PublicBreweryProduct).Manufacturer?.name || "Brasserie"}</Text>
+              <Text style={styles.cardText}>{(item as PublicBreweryProduct).description || "Aucune description"}</Text>
+              <Text style={styles.price}>{(item as PublicBreweryProduct).price ? `${(item as PublicBreweryProduct).price} ${(item as PublicBreweryProduct).currency}` : "Prix non renseigné"}</Text>
+            </View>
+          )}
+          ListEmptyComponent={<Text style={styles.empty}>Aucun contenu disponible.</Text>}
         />
-        <ExternalLink href="https://reactnative.dev/docs/images">
-          <ThemedText type="link">Learn more</ThemedText>
-        </ExternalLink>
-      </Collapsible>
-      <Collapsible title="Light and dark mode components">
-        <ThemedText>
-          This template has light and dark mode support. The{' '}
-          <ThemedText type="defaultSemiBold">useColorScheme()</ThemedText> hook lets you inspect
-          what the user&apos;s current color scheme is, and so you can adjust UI colors accordingly.
-        </ThemedText>
-        <ExternalLink href="https://docs.expo.dev/develop/user-interface/color-themes/">
-          <ThemedText type="link">Learn more</ThemedText>
-        </ExternalLink>
-      </Collapsible>
-      <Collapsible title="Animations">
-        <ThemedText>
-          This template includes an example of an animated component. The{' '}
-          <ThemedText type="defaultSemiBold">components/HelloWave.tsx</ThemedText> component uses
-          the powerful{' '}
-          <ThemedText type="defaultSemiBold" style={{ fontFamily: Fonts.mono }}>
-            react-native-reanimated
-          </ThemedText>{' '}
-          library to create a waving hand animation.
-        </ThemedText>
-        {Platform.select({
-          ios: (
-            <ThemedText>
-              The <ThemedText type="defaultSemiBold">components/ParallaxScrollView.tsx</ThemedText>{' '}
-              component provides a parallax effect for the header image.
-            </ThemedText>
-          ),
-        })}
-      </Collapsible>
-    </ParallaxScrollView>
+      )}
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  headerImage: {
-    color: colors.muted as any,
-    bottom: -90,
-    left: -35,
-    position: 'absolute',
-  },
-  titleContainer: {
-    flexDirection: 'row',
-    gap: 8,
-  },
+  container: { flex: 1, paddingTop: spacing.lg, paddingHorizontal: spacing.lg, backgroundColor: colors.bg },
+  title: { fontSize: typography.h1, fontWeight: "900", color: colors.text, marginBottom: spacing.sm, textAlign: "center" },
+  subtitle: { color: colors.muted, textAlign: "center", marginBottom: spacing.lg, lineHeight: 20 },
+  segmentWrap: { flexDirection: "row", gap: spacing.sm, marginBottom: spacing.md },
+  segment: { flex: 1, borderRadius: 14, paddingVertical: spacing.md, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.card, alignItems: "center" },
+  segmentActive: { backgroundColor: colors.primary, borderColor: colors.primaryDark },
+  segmentText: { color: colors.text, fontWeight: "900" },
+  segmentTextActive: { color: "#2E1A0F" },
+  searchWrap: { flexDirection: "row", alignItems: "center", gap: spacing.sm, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.card, paddingHorizontal: spacing.md, paddingVertical: spacing.sm, borderRadius: 16, marginBottom: spacing.lg },
+  searchIcon: { color: colors.muted, fontSize: 16, fontWeight: "900" },
+  search: { flex: 1, color: colors.text, paddingVertical: 2 },
+  center: { flex: 1, alignItems: "center", justifyContent: "center", gap: 10 },
+  centerText: { color: colors.muted },
+  errorText: { color: colors.dangerText, fontWeight: "800", textAlign: "center" },
+  retry: { color: colors.primaryDark, fontWeight: "900" },
+  list: { gap: spacing.md, paddingBottom: spacing.xxl },
+  card: { backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border, borderRadius: 18, padding: spacing.md, marginBottom: spacing.md },
+  cardImage: { width: "100%", height: 170, borderRadius: 14, marginBottom: spacing.md, backgroundColor: colors.bg2 },
+  cardTitle: { color: colors.text, fontWeight: "900", fontSize: 18 },
+  cardMeta: { color: colors.muted, marginTop: spacing.xs, fontWeight: "700" },
+  cardText: { color: colors.text, marginTop: spacing.sm, lineHeight: 20 },
+  price: { color: colors.primaryDark, marginTop: spacing.md, fontWeight: "900" },
+  empty: { marginTop: spacing.lg, textAlign: "center", color: colors.muted },
 });
-
-
