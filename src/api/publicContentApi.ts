@@ -20,12 +20,21 @@ export type PublicBreweryProduct = {
   createdAt?: string;
 };
 
+export type ParticipationStatus = "EN_ATTENTE" | "VALIDE" | "REJETE";
+
 export type PublicBreweryEvent = {
   id: number;
   title: string;
   content: string;
   imageUrl?: string | null;
   publishedAt?: string | null;
+  startAt?: string | null;
+  endAt?: string | null;
+  address?: string | null;
+  registrationDeadline?: string | null;
+  participantsCount?: number;
+  registrationClosed?: boolean;
+  myParticipationStatus?: ParticipationStatus | null;
   Manufacturer?: PublicManufacturer;
   createdAt?: string;
 };
@@ -36,4 +45,8 @@ export async function listPublicProductsApi() {
 
 export async function listUpcomingEventsApi() {
   return apiRequest<{ items: PublicBreweryEvent[] }>("/api/breweries/events", "GET");
+}
+
+export async function participateInEventApi(eventId: number) {
+  return apiRequest<{ status: ParticipationStatus }>(`/api/breweries/events/${eventId}/participate`, "POST");
 }

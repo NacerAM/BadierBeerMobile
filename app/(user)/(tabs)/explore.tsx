@@ -1,17 +1,39 @@
 ﻿import React, { useCallback, useEffect, useMemo, useState } from "react";
-import { View, Text, StyleSheet, FlatList, Pressable, TextInput, ActivityIndicator, Image } from "react-native";
+import { View, Text, StyleSheet, FlatList, Pressable, TextInput, ActivityIndicator, Image, Alert } from "react-native";
 import { useFocusEffect } from "@react-navigation/native";
 import { colors } from "../../../src/theme/colors";
 import { spacing } from "../../../src/theme/spacing";
 import { typography } from "../../../src/theme/typography";
+import Button from "../../../src/components/Button";
 import {
   listPublicProductsApi,
   listUpcomingEventsApi,
+  participateInEventApi,
   PublicBreweryEvent,
   PublicBreweryProduct,
 } from "../../../src/api/publicContentApi";
 
 type ExploreMode = "events" | "products";
+
+function formatDateTime(value?: string | null) {
+  if (!value) return "A confirmer";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  return date.toLocaleString("fr-BE", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
+function participationLabel(item: PublicBreweryEvent) {
+  if (item.myParticipationStatus === "VALIDE") return "Participation validee";
+  if (item.myParticipationStatus === "EN_ATTENTE") return "Participation en attente de validation";
+  if (item.registrationClosed) return "Inscriptions cloturees";
+  return null;
+}
 
 export default function ExploreScreen() {
   const [mode, setMode] = useState<ExploreMode>("events");
@@ -19,6 +41,7 @@ export default function ExploreScreen() {
   const [products, setProducts] = useState<PublicBreweryProduct[]>([]);
   const [events, setEvents] = useState<PublicBreweryEvent[]>([]);
   const [loading, setLoading] = useState(true);
+  const [submittingEventId, setSubmittingEventId] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const load = useCallback(async () => {
@@ -32,7 +55,7 @@ export default function ExploreScreen() {
       setProducts(productsRes.items ?? []);
       setEvents(eventsRes.items ?? []);
     } catch (e: any) {
-      setError(e?.message || "Erreur réseau");
+      setError(e?.message || "Erreur reseau");
     } finally {
       setLoading(false);
     }
@@ -57,27 +80,69 @@ export default function ExploreScreen() {
     return events.filter((item) =>
       item.title.toLowerCase().includes(query) ||
       (item.Manufacturer?.name || "").toLowerCase().includes(query) ||
-      item.content.toLowerCase().includes(query)
+      item.content.toLowerCase().includes(query) ||
+      (item.address || "").toLowerCase().includes(query)
     );
   }, [q, events]);
 
-  function formatDate(value?: string | null) {
-    if (!value) return "Date à confirmer";
-    const d = new Date(value);
-    if (Number.isNaN(d.getTime())) return "Date à confirmer";
-    return d.toLocaleDateString("fr-BE", { day: "2-digit", month: "long", year: "numeric" });
+  async function onParticipate(eventId: number) {
+    try {
+      setSubmittingEventId(eventId);
+      await participateInEventApi(eventId);
+      await load();
+      Alert.alert("Participation envoyee", "Votre demande a ete transmise pour validation admin.");
+    } catch (e: any) {
+      Alert.alert("Erreur", e?.message || "Impossible de participer a cet evenement");
+    } finally {
+      setSubmittingEventId(null);
+    }
   }
 
-  const data = mode === "events" ? filteredEvents : filteredProducts;
+  function renderEvent(item: PublicBreweryEvent) {
+    return (
+      <View style={styles.card}>
+        {item.imageUrl ? <Image source={{ uri: item.imageUrl }} style={styles.cardImage} resizeMode="cover" /> : null}
+        <Text style={styles.cardTitle}>{item.title}</Text>
+        <Text style={styles.cardMeta}>{item.Manufacturer?.name || "Brasserie"}</Text>
+        <Text style={styles.cardMeta}>Debut: {formatDateTime(item.startAt || item.publishedAt)}</Text>
+        <Text style={styles.cardMeta}>Fin: {formatDateTime(item.endAt)}</Text>
+        <Text style={styles.cardMeta}>Adresse: {item.address || "A confirmer"}</Text>
+        <Text style={styles.cardMeta}>Date limite: {formatDateTime(item.registrationDeadline)}</Text>
+        <Text style={styles.cardMeta}>Participants valides: {item.participantsCount ?? 0}</Text>
+        <Text style={styles.cardText}>{item.content}</Text>
+        {participationLabel(item) ? <Text style={styles.statusInfo}>{participationLabel(item)}</Text> : null}
+        {!item.myParticipationStatus && !item.registrationClosed ? (
+          <Button
+            label={submittingEventId === item.id ? "Envoi..." : "Participer"}
+            onPress={() => onParticipate(item.id)}
+            disabled={submittingEventId === item.id}
+            style={styles.actionButton}
+          />
+        ) : null}
+      </View>
+    );
+  }
+
+  function renderProduct(item: PublicBreweryProduct) {
+    return (
+      <View style={styles.card}>
+        {item.imageUrl ? <Image source={{ uri: item.imageUrl }} style={styles.cardImage} resizeMode="cover" /> : null}
+        <Text style={styles.cardTitle}>{item.name}</Text>
+        <Text style={styles.cardMeta}>{item.Manufacturer?.name || "Brasserie"}</Text>
+        <Text style={styles.cardText}>{item.description || "Aucune description"}</Text>
+        <Text style={styles.price}>{item.price ? `${item.price} ${item.currency}` : "Prix non renseigne"}</Text>
+      </View>
+    );
+  }
 
   return (
     <View style={styles.container}>
       <Text style={styles.title}>Explorer</Text>
-      <Text style={styles.subtitle}>Consultez les événements à venir et les produits mis en vente par les brasseries.</Text>
+      <Text style={styles.subtitle}>Consultez les evenements a venir et les produits mis en vente par les brasseries.</Text>
 
       <View style={styles.segmentWrap}>
         <Pressable onPress={() => setMode("events")} style={[styles.segment, mode === "events" ? styles.segmentActive : null]}>
-          <Text style={[styles.segmentText, mode === "events" ? styles.segmentTextActive : null]}>Événements</Text>
+          <Text style={[styles.segmentText, mode === "events" ? styles.segmentTextActive : null]}>Evenements</Text>
         </Pressable>
         <Pressable onPress={() => setMode("products")} style={[styles.segment, mode === "products" ? styles.segmentActive : null]}>
           <Text style={[styles.segmentText, mode === "products" ? styles.segmentTextActive : null]}>Produits</Text>
@@ -85,11 +150,11 @@ export default function ExploreScreen() {
       </View>
 
       <View style={styles.searchWrap}>
-        <Text style={styles.searchIcon}>🔎</Text>
+        <Text style={styles.searchIcon}>Rech.</Text>
         <TextInput
           value={q}
           onChangeText={setQ}
-          placeholder={mode === "events" ? "Rechercher un événement…" : "Rechercher un produit…"}
+          placeholder={mode === "events" ? "Rechercher un evenement..." : "Rechercher un produit..."}
           placeholderTextColor={colors.muted}
           style={styles.search}
           autoCapitalize="none"
@@ -97,34 +162,23 @@ export default function ExploreScreen() {
       </View>
 
       {loading ? (
-        <View style={styles.center}><ActivityIndicator /><Text style={styles.centerText}>Chargement…</Text></View>
+        <View style={styles.center}><ActivityIndicator /><Text style={styles.centerText}>Chargement...</Text></View>
       ) : error ? (
-        <View style={styles.center}><Text style={styles.errorText}>{error}</Text><Text style={styles.retry} onPress={load}>Réessayer</Text></View>
-      ) : (
+        <View style={styles.center}><Text style={styles.errorText}>{error}</Text><Text style={styles.retry} onPress={load}>Reessayer</Text></View>
+      ) : mode === "events" ? (
         <FlatList
-          data={data}
+          data={filteredEvents}
           keyExtractor={(item) => String(item.id)}
           contentContainerStyle={styles.list}
-          renderItem={({ item }) => mode === "events" ? (
-            <View style={styles.card}>
-              {(item as PublicBreweryEvent).imageUrl ? (
-                <Image source={{ uri: (item as PublicBreweryEvent).imageUrl! }} style={styles.cardImage} resizeMode="cover" />
-              ) : null}
-              <Text style={styles.cardTitle}>{(item as PublicBreweryEvent).title}</Text>
-              <Text style={styles.cardMeta}>{formatDate((item as PublicBreweryEvent).publishedAt)} · {(item as PublicBreweryEvent).Manufacturer?.name || "Brasserie"}</Text>
-              <Text style={styles.cardText}>{(item as PublicBreweryEvent).content}</Text>
-            </View>
-          ) : (
-            <View style={styles.card}>
-              {(item as PublicBreweryProduct).imageUrl ? (
-                <Image source={{ uri: (item as PublicBreweryProduct).imageUrl! }} style={styles.cardImage} resizeMode="cover" />
-              ) : null}
-              <Text style={styles.cardTitle}>{(item as PublicBreweryProduct).name}</Text>
-              <Text style={styles.cardMeta}>{(item as PublicBreweryProduct).Manufacturer?.name || "Brasserie"}</Text>
-              <Text style={styles.cardText}>{(item as PublicBreweryProduct).description || "Aucune description"}</Text>
-              <Text style={styles.price}>{(item as PublicBreweryProduct).price ? `${(item as PublicBreweryProduct).price} ${(item as PublicBreweryProduct).currency}` : "Prix non renseigné"}</Text>
-            </View>
-          )}
+          renderItem={({ item }) => renderEvent(item)}
+          ListEmptyComponent={<Text style={styles.empty}>Aucun contenu disponible.</Text>}
+        />
+      ) : (
+        <FlatList
+          data={filteredProducts}
+          keyExtractor={(item) => String(item.id)}
+          contentContainerStyle={styles.list}
+          renderItem={({ item }) => renderProduct(item)}
           ListEmptyComponent={<Text style={styles.empty}>Aucun contenu disponible.</Text>}
         />
       )}
@@ -142,7 +196,7 @@ const styles = StyleSheet.create({
   segmentText: { color: colors.text, fontWeight: "900" },
   segmentTextActive: { color: "#2E1A0F" },
   searchWrap: { flexDirection: "row", alignItems: "center", gap: spacing.sm, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.card, paddingHorizontal: spacing.md, paddingVertical: spacing.sm, borderRadius: 16, marginBottom: spacing.lg },
-  searchIcon: { color: colors.muted, fontSize: 16, fontWeight: "900" },
+  searchIcon: { color: colors.muted, fontSize: 12, fontWeight: "900" },
   search: { flex: 1, color: colors.text, paddingVertical: 2 },
   center: { flex: 1, alignItems: "center", justifyContent: "center", gap: 10 },
   centerText: { color: colors.muted },
@@ -154,6 +208,8 @@ const styles = StyleSheet.create({
   cardTitle: { color: colors.text, fontWeight: "900", fontSize: 18 },
   cardMeta: { color: colors.muted, marginTop: spacing.xs, fontWeight: "700" },
   cardText: { color: colors.text, marginTop: spacing.sm, lineHeight: 20 },
+  statusInfo: { color: colors.primaryDark, marginTop: spacing.sm, fontWeight: "800" },
+  actionButton: { marginTop: spacing.md },
   price: { color: colors.primaryDark, marginTop: spacing.md, fontWeight: "900" },
   empty: { marginTop: spacing.lg, textAlign: "center", color: colors.muted },
 });
