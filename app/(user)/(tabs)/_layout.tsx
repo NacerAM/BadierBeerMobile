@@ -1,8 +1,26 @@
-﻿import { Tabs } from "expo-router";
+﻿import { Tabs, usePathname } from "expo-router";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { colors } from "../../../src/theme/colors";
+import { useCallback, useEffect, useState } from "react";
+import { listNotificationsApi } from "../../../src/api/notificationsApi";
 
 export default function UserTabsLayout() {
+  const pathname = usePathname();
+  const [unreadCount, setUnreadCount] = useState(0);
+
+  const loadUnreadCount = useCallback(async () => {
+    try {
+      const res = await listNotificationsApi();
+      setUnreadCount(res.unreadCount ?? 0);
+    } catch {
+      setUnreadCount(0);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadUnreadCount();
+  }, [loadUnreadCount, pathname]);
+
   return (
     <Tabs
       screenOptions={{
@@ -47,6 +65,17 @@ export default function UserTabsLayout() {
           tabBarIcon: ({ color, size, focused }) => (
             <Ionicons name={focused ? "compass" : "compass-outline"} color={color} size={size ?? 22} />
           ),
+        }}
+      />
+      <Tabs.Screen
+        name="notifications"
+        options={{
+          title: "Notifications",
+          tabBarIcon: ({ color, size, focused }) => (
+            <Ionicons name={focused ? "notifications" : "notifications-outline"} color={color} size={size ?? 22} />
+          ),
+          tabBarBadge: unreadCount > 0 ? unreadCount : undefined,
+          tabBarBadgeStyle: { backgroundColor: colors.dangerText, color: "#fff", fontWeight: "900" },
         }}
       />
 

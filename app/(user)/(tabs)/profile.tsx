@@ -1,23 +1,38 @@
-﻿import React, { useEffect, useState } from "react";
+﻿import React, { useCallback, useEffect, useState } from "react";
 import { View, Text, StyleSheet, Pressable, ScrollView, Image, Modal } from "react-native";
 import { colors } from "../../../src/theme/colors";
 import { spacing } from "../../../src/theme/spacing";
 import { typography } from "../../../src/theme/typography";
 import Button from "../../../src/components/Button";
 import { useAuth } from "../../../src/store/useAuth";
-import { router } from "expo-router";
+import { router, useFocusEffect } from "expo-router";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { getMyStatsApi, MyStats } from "../../../src/api/usersApi";
+import { listNotificationsApi } from "../../../src/api/notificationsApi";
 
 export default function Profile() {
   const { user, logout } = useAuth();
   const [viewerVisible, setViewerVisible] = useState(false);
   const [stats, setStats] = useState<MyStats | null>(null);
+  const [unreadCount, setUnreadCount] = useState(0);
   const isBrewer = user?.role === "BREWER";
 
-  useEffect(() => {
-    getMyStatsApi().then(setStats).catch(() => setStats(null));
+  const load = useCallback(async () => {
+    try {
+      const [statsRes, notificationsRes] = await Promise.all([
+        getMyStatsApi(),
+        listNotificationsApi(),
+      ]);
+      setStats(statsRes);
+      setUnreadCount(notificationsRes.unreadCount ?? 0);
+    } catch {
+      setStats(null);
+      setUnreadCount(0);
+    }
   }, []);
+
+  useEffect(() => { load(); }, [load]);
+  useFocusEffect(useCallback(() => { load(); }, [load]));
 
   async function onLogout() {
     await logout();
@@ -49,7 +64,7 @@ export default function Profile() {
         <Text style={styles.email}>{user?.email || "—"}</Text>
         {(user as any)?.bio ? <Text style={{ marginTop: spacing.sm, color: colors.text, textAlign: "center" }}>{(user as any).bio}</Text> : null}
         <View style={{ marginTop: spacing.sm }}>
-          <Button label="Éditer" variant="secondary" onPress={() => router.push("/(user)/(tabs)/edit-profile" as any)} />
+          <Button label="Editer" variant="secondary" onPress={() => router.push("/(user)/(tabs)/edit-profile" as any)} />
         </View>
       </View>
 
@@ -71,28 +86,34 @@ export default function Profile() {
         </View>
       </View>
 
+      <Pressable style={styles.item} onPress={() => router.push("/(user)/notifications" as any)}>
+        <Text style={styles.itemTitle}>Notifications</Text>
+        <Text style={styles.itemSub}>{unreadCount} notification{unreadCount > 1 ? "s" : ""} non lue{unreadCount > 1 ? "s" : ""}</Text>
+        <Text style={styles.itemArrow}>›</Text>
+      </Pressable>
+
       <Pressable style={styles.item} onPress={() => router.push("/(user)/(tabs)/proposals" as any)}>
         <Text style={styles.itemTitle}>Suivi des propositions</Text>
-        <Text style={styles.itemSub}>Consultez l’état de vos propositions</Text>
+        <Text style={styles.itemSub}>Consultez l'etat de vos propositions</Text>
         <Text style={styles.itemArrow}>›</Text>
       </Pressable>
 
       {isBrewer ? (
         <Pressable style={styles.item} onPress={() => router.push("/(user)/(tabs)/brewer" as any)}>
           <Text style={styles.itemTitle}>Espace brasseur</Text>
-          <Text style={styles.itemSub}>Produits, événements et suivi de vos contenus</Text>
+          <Text style={styles.itemSub}>Produits, evenements et suivi de vos contenus</Text>
           <Text style={styles.itemArrow}>›</Text>
         </Pressable>
       ) : null}
 
       <Pressable style={styles.item} onPress={() => router.push("/(user)/(tabs)/settings" as any)}>
-        <Text style={styles.itemTitle}>Favoris et paramètres</Text>
-        <Text style={styles.itemSub}>Changer le mot de passe, préférences…</Text>
+        <Text style={styles.itemTitle}>Favoris et parametres</Text>
+        <Text style={styles.itemSub}>Changer le mot de passe, preferences...</Text>
         <Text style={styles.itemArrow}>›</Text>
       </Pressable>
 
       <View style={{ marginTop: spacing.lg }}>
-        <Button label="Se déconnecter" onPress={onLogout} />
+        <Button label="Se deconnecter" onPress={onLogout} />
       </View>
 
       <Pressable style={{ marginTop: spacing.sm }} onPress={() => router.back()}>

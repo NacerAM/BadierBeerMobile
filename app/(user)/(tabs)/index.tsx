@@ -1,7 +1,7 @@
-﻿import React, { useEffect, useState } from "react";
+﻿import React, { useCallback, useEffect, useState } from "react";
 import { useAuth } from "../../../src/store/useAuth";
 import { View, Text, StyleSheet, Image, ScrollView, Pressable } from "react-native";
-import { router } from "expo-router";
+import { router, useFocusEffect } from "expo-router";
 import Button from "../../../src/components/Button";
 import { colors } from "../../../src/theme/colors";
 import { spacing } from "../../../src/theme/spacing";
@@ -14,18 +14,18 @@ export default function UserHomeScreen() {
   const [loading, setLoading] = useState(true);
   const isBrewer = user?.role === "BREWER";
 
-  useEffect(() => {
-    async function load() {
-      try {
-        setLoading(true);
-        const res = await listGlassesApi(1, 8, "rating");
-        setItems(res.items ?? []);
-      } finally {
-        setLoading(false);
-      }
+  const load = useCallback(async () => {
+    try {
+      setLoading(true);
+      const glassesRes = await listGlassesApi(1, 8, "rating");
+      setItems(glassesRes.items ?? []);
+    } finally {
+      setLoading(false);
     }
-    load();
   }, []);
+
+  useEffect(() => { load(); }, [load]);
+  useFocusEffect(useCallback(() => { load(); }, [load]));
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
@@ -45,7 +45,7 @@ export default function UserHomeScreen() {
       <View style={styles.paperBlock}>
         <Text style={styles.heroTitle}>Bonjour {user?.username ?? "!"}</Text>
         <Text style={styles.heroSubtitle}>
-          Prêt à découvrir et partager votre passion pour les verres de bière ?
+          Pret a decouvrir et partager votre passion pour les verres de biere ?
         </Text>
 
         <View style={{ marginTop: spacing.lg }}>
@@ -78,7 +78,7 @@ export default function UserHomeScreen() {
       </View>
 
       <View style={styles.sectionHeader}>
-        <Text style={styles.sectionTitle}>Derniers meilleurs verres validés</Text>
+        <Text style={styles.sectionTitle}>Derniers meilleurs verres valides</Text>
         <Pressable onPress={() => router.push("/(user)/(tabs)/catalogue" as any)} hitSlop={10}>
           <Text style={styles.sectionLink}>›</Text>
         </Pressable>
@@ -100,7 +100,7 @@ export default function UserHomeScreen() {
             )}
 
             <View style={styles.badge}>
-              <Text style={styles.badgeText}>Validé</Text>
+              <Text style={styles.badgeText}>Valide</Text>
             </View>
 
             <Text style={styles.cardTitle} numberOfLines={1}>{g.name}</Text>
@@ -109,7 +109,7 @@ export default function UserHomeScreen() {
         ))}
         {items.length === 0 && !loading ? (
           <View style={[styles.card, { alignItems: "center", justifyContent: "center" }]}>
-            <Text style={styles.cardSub}>Aucun verre à afficher</Text>
+            <Text style={styles.cardSub}>Aucun verre a afficher</Text>
           </View>
         ) : null}
       </ScrollView>

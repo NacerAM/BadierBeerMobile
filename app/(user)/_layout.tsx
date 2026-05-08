@@ -10,13 +10,14 @@ export default function UserStackLayout() {
   const pathname = usePathname();
   const { user } = useAuth();
   const isProfile = pathname?.includes("/(user)/(tabs)/profile") || pathname?.endsWith("/profile");
-  const isHome = pathname === "/(user)/(tabs)" || pathname === "/(user)/(tabs)/" || (pathname?.includes("/(user)/(tabs)/index"));
   return (
     <View style={{ flex: 1 }} pointerEvents="box-none">
       <Stack screenOptions={{ headerShown: false }}>
         <Stack.Screen name="(tabs)" />
         <Stack.Screen name="glass/[id]" />
         <Stack.Screen name="profile/[id]" />
+        <Stack.Screen name="notifications" />
+        <Stack.Screen name="event/[id]" />
       </Stack>
       {!isProfile && (
         <Pressable

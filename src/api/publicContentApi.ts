@@ -47,6 +47,10 @@ export async function listUpcomingEventsApi() {
   return apiRequest<{ items: PublicBreweryEvent[] }>("/api/breweries/events", "GET");
 }
 
+export async function getPublicEventApi(eventId: number) {
+  return apiRequest<PublicBreweryEvent>(`/api/breweries/events/${eventId}`, "GET");
+}
+
 export async function participateInEventApi(eventId: number) {
   return apiRequest<{ status: ParticipationStatus }>(`/api/breweries/events/${eventId}/participate`, "POST");
 }
