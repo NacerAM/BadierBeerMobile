@@ -85,6 +85,7 @@ export default function UserTabsLayout() {
       <Tabs.Screen name="profile" options={{ href: null }} />
       <Tabs.Screen name="edit-profile" options={{ href: null }} />
       <Tabs.Screen name="settings" options={{ href: null }} />
+      <Tabs.Screen name="admin" options={{ href: null }} />
       <Tabs.Screen name="brewer" options={{ href: null }} />
       <Tabs.Screen name="brewer-products" options={{ href: null }} />
       <Tabs.Screen name="brewer-events" options={{ href: null }} />

@@ -16,6 +16,7 @@ export default function Profile() {
   const [stats, setStats] = useState<MyStats | null>(null);
   const [unreadCount, setUnreadCount] = useState(0);
   const isBrewer = user?.role === "BREWER";
+  const isAdmin = user?.role === "ADMIN";
 
   const load = useCallback(async () => {
     try {
@@ -46,8 +47,17 @@ export default function Profile() {
   return (
     <ScrollView style={styles.container} contentContainerStyle={{ paddingBottom: spacing.xl }}>
       <View style={styles.topBar}>
-        <Text style={styles.topTitle}>Profil</Text>
+        <Text style={styles.topTitle}>{isAdmin ? "Profil administrateur" : "Profil"}</Text>
       </View>
+
+      {isAdmin ? (
+        <Pressable style={styles.adminHero} onPress={() => router.push("/(user)/(tabs)/admin" as any)}>
+          <Text style={styles.adminHeroEyebrow}>Compte administrateur</Text>
+          <Text style={styles.adminHeroTitle}>Acceder a l'espace administrateur</Text>
+          <Text style={styles.adminHeroText}>Validation des comptes, verres et evenements.</Text>
+          <Text style={styles.adminHeroArrow}>›</Text>
+        </Pressable>
+      ) : null}
 
       <View style={styles.headerCard}>
         <View style={styles.avatarWrap}>
@@ -62,6 +72,7 @@ export default function Profile() {
         </View>
         <Text style={styles.name}>{user?.username || "Utilisateur"}</Text>
         <Text style={styles.email}>{user?.email || "—"}</Text>
+        <Text style={styles.roleLine}>Role: {user?.role || "—"}</Text>
         {(user as any)?.bio ? <Text style={{ marginTop: spacing.sm, color: colors.text, textAlign: "center" }}>{(user as any).bio}</Text> : null}
         <View style={{ marginTop: spacing.sm }}>
           <Button label="Editer" variant="secondary" onPress={() => router.push("/(user)/(tabs)/edit-profile" as any)} />
@@ -85,6 +96,14 @@ export default function Profile() {
           </View>
         </View>
       </View>
+
+      {isAdmin ? (
+        <Pressable style={styles.item} onPress={() => router.push("/(user)/(tabs)/admin" as any)}>
+          <Text style={styles.itemTitle}>Espace administrateur</Text>
+          <Text style={styles.itemSub}>Validation des comptes, verres et evenements</Text>
+          <Text style={styles.itemArrow}>›</Text>
+        </Pressable>
+      ) : null}
 
       <Pressable style={styles.item} onPress={() => router.push("/(user)/notifications" as any)}>
         <Text style={styles.itemTitle}>Notifications</Text>
@@ -136,6 +155,20 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.bg },
   topBar: { paddingTop: spacing.xl, paddingBottom: spacing.md, alignItems: "center" },
   topTitle: { fontSize: typography.h1, fontWeight: "900", color: colors.text },
+  adminHero: {
+    marginHorizontal: spacing.lg,
+    marginBottom: spacing.md,
+    padding: spacing.lg,
+    borderRadius: 18,
+    backgroundColor: colors.primarySoft,
+    borderWidth: 1,
+    borderColor: colors.primaryDark,
+    position: "relative",
+  },
+  adminHeroEyebrow: { color: colors.primaryDark, fontWeight: "900", fontSize: 12, textTransform: "uppercase" },
+  adminHeroTitle: { color: colors.text, fontWeight: "900", fontSize: 20, marginTop: spacing.xs },
+  adminHeroText: { color: colors.text, marginTop: spacing.sm, lineHeight: 20, paddingRight: 24 },
+  adminHeroArrow: { position: "absolute", right: spacing.lg, top: "50%", marginTop: -16, fontSize: 30, color: colors.primaryDark, fontWeight: "900" },
   headerCard: {
     marginHorizontal: spacing.lg,
     padding: spacing.lg,
@@ -155,6 +188,7 @@ const styles = StyleSheet.create({
   badgeText: { color: colors.badgeText, fontWeight: "900", fontSize: 12 },
   name: { marginTop: spacing.sm, fontSize: 22, fontWeight: "900", color: colors.text },
   email: { marginTop: 2, color: colors.muted },
+  roleLine: { marginTop: spacing.xs, color: colors.primaryDark, fontWeight: "900" },
   item: {
     marginTop: spacing.md,
     marginHorizontal: spacing.lg,
