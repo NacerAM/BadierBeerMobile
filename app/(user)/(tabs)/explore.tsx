@@ -1,6 +1,7 @@
 ﻿import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { View, Text, StyleSheet, FlatList, Pressable, TextInput, ActivityIndicator, Image, Alert } from "react-native";
 import { useFocusEffect } from "@react-navigation/native";
+import { router } from "expo-router";
 import { colors } from "../../../src/theme/colors";
 import { spacing } from "../../../src/theme/spacing";
 import { typography } from "../../../src/theme/typography";
@@ -12,6 +13,7 @@ import {
   PublicBreweryEvent,
   PublicBreweryProduct,
 } from "../../../src/api/publicContentApi";
+import { openMessageConversationApi } from "../../../src/api/messagesApi";
 
 type ExploreMode = "events" | "products";
 
@@ -42,6 +44,7 @@ export default function ExploreScreen() {
   const [events, setEvents] = useState<PublicBreweryEvent[]>([]);
   const [loading, setLoading] = useState(true);
   const [submittingEventId, setSubmittingEventId] = useState<number | null>(null);
+  const [contactingKey, setContactingKey] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const load = useCallback(async () => {
@@ -98,6 +101,30 @@ export default function ExploreScreen() {
     }
   }
 
+  async function contactBrewerForProduct(productId: number) {
+    try {
+      setContactingKey(`product-${productId}`);
+      const conversation = await openMessageConversationApi({ targetType: "PRODUCT", targetId: productId });
+      router.push({ pathname: "/(user)/chat/[id]", params: { id: String(conversation.id) } } as any);
+    } catch (e: any) {
+      Alert.alert("Erreur", e?.message || "Impossible de contacter ce brasseur");
+    } finally {
+      setContactingKey(null);
+    }
+  }
+
+  async function contactBrewerForEvent(eventId: number) {
+    try {
+      setContactingKey(`event-${eventId}`);
+      const conversation = await openMessageConversationApi({ targetType: "EVENT", targetId: eventId });
+      router.push({ pathname: "/(user)/chat/[id]", params: { id: String(conversation.id) } } as any);
+    } catch (e: any) {
+      Alert.alert("Erreur", e?.message || "Impossible de contacter ce brasseur");
+    } finally {
+      setContactingKey(null);
+    }
+  }
+
   function renderEvent(item: PublicBreweryEvent) {
     return (
       <View style={styles.card}>
@@ -111,14 +138,17 @@ export default function ExploreScreen() {
         <Text style={styles.cardMeta}>Participants valides: {item.participantsCount ?? 0}</Text>
         <Text style={styles.cardText}>{item.content}</Text>
         {participationLabel(item) ? <Text style={styles.statusInfo}>{participationLabel(item)}</Text> : null}
-        {!item.myParticipationStatus && !item.registrationClosed ? (
-          <Button
-            label={submittingEventId === item.id ? "Envoi..." : "Participer"}
-            onPress={() => onParticipate(item.id)}
-            disabled={submittingEventId === item.id}
-            style={styles.actionButton}
-          />
-        ) : null}
+        <View style={styles.actionStack}>
+          <Button label="Voir details" variant="secondary" onPress={() => router.push({ pathname: "/(user)/event/[id]", params: { id: String(item.id) } } as any)} />
+          <Button label={contactingKey === `event-${item.id}` ? "Ouverture..." : "Contacter le brasseur"} variant="secondary" onPress={() => contactBrewerForEvent(item.id)} disabled={contactingKey != null} />
+          {!item.myParticipationStatus && !item.registrationClosed ? (
+            <Button
+              label={submittingEventId === item.id ? "Envoi..." : "Participer"}
+              onPress={() => onParticipate(item.id)}
+              disabled={submittingEventId === item.id}
+            />
+          ) : null}
+        </View>
       </View>
     );
   }
@@ -131,6 +161,7 @@ export default function ExploreScreen() {
         <Text style={styles.cardMeta}>{item.Manufacturer?.name || "Brasserie"}</Text>
         <Text style={styles.cardText}>{item.description || "Aucune description"}</Text>
         <Text style={styles.price}>{item.price ? `${item.price} ${item.currency}` : "Prix non renseigne"}</Text>
+        <Button label={contactingKey === `product-${item.id}` ? "Ouverture..." : "Contacter le brasseur"} variant="secondary" onPress={() => contactBrewerForProduct(item.id)} disabled={contactingKey != null} style={styles.actionButton} />
       </View>
     );
   }
@@ -209,6 +240,7 @@ const styles = StyleSheet.create({
   cardMeta: { color: colors.muted, marginTop: spacing.xs, fontWeight: "700" },
   cardText: { color: colors.text, marginTop: spacing.sm, lineHeight: 20 },
   statusInfo: { color: colors.primaryDark, marginTop: spacing.sm, fontWeight: "800" },
+  actionStack: { marginTop: spacing.md, gap: spacing.sm },
   actionButton: { marginTop: spacing.md },
   price: { color: colors.primaryDark, marginTop: spacing.md, fontWeight: "900" },
   empty: { marginTop: spacing.lg, textAlign: "center", color: colors.muted },

@@ -3,23 +3,30 @@ import Ionicons from "@expo/vector-icons/Ionicons";
 import { colors } from "../../../src/theme/colors";
 import { useCallback, useEffect, useState } from "react";
 import { listNotificationsApi } from "../../../src/api/notificationsApi";
+import { listMessageUnreadCountApi } from "../../../src/api/messagesApi";
 
 export default function UserTabsLayout() {
   const pathname = usePathname();
-  const [unreadCount, setUnreadCount] = useState(0);
+  const [unreadNotifications, setUnreadNotifications] = useState(0);
+  const [unreadMessages, setUnreadMessages] = useState(0);
 
-  const loadUnreadCount = useCallback(async () => {
+  const loadBadges = useCallback(async () => {
     try {
-      const res = await listNotificationsApi();
-      setUnreadCount(res.unreadCount ?? 0);
+      const [notificationsRes, messagesRes] = await Promise.all([
+        listNotificationsApi(),
+        listMessageUnreadCountApi(),
+      ]);
+      setUnreadNotifications(notificationsRes.unreadCount ?? 0);
+      setUnreadMessages(messagesRes.unreadCount ?? 0);
     } catch {
-      setUnreadCount(0);
+      setUnreadNotifications(0);
+      setUnreadMessages(0);
     }
   }, []);
 
   useEffect(() => {
-    loadUnreadCount();
-  }, [loadUnreadCount, pathname]);
+    loadBadges();
+  }, [loadBadges, pathname]);
 
   return (
     <Tabs
@@ -56,6 +63,8 @@ export default function UserTabsLayout() {
           tabBarIcon: ({ color, size, focused }) => (
             <Ionicons name={focused ? "chatbubbles" : "chatbubbles-outline"} color={color} size={size ?? 22} />
           ),
+          tabBarBadge: unreadMessages > 0 ? unreadMessages : undefined,
+          tabBarBadgeStyle: { backgroundColor: colors.dangerText, color: "#fff", fontWeight: "900" },
         }}
       />
       <Tabs.Screen
@@ -74,7 +83,7 @@ export default function UserTabsLayout() {
           tabBarIcon: ({ color, size, focused }) => (
             <Ionicons name={focused ? "notifications" : "notifications-outline"} color={color} size={size ?? 22} />
           ),
-          tabBarBadge: unreadCount > 0 ? unreadCount : undefined,
+          tabBarBadge: unreadNotifications > 0 ? unreadNotifications : undefined,
           tabBarBadgeStyle: { backgroundColor: colors.dangerText, color: "#fff", fontWeight: "900" },
         }}
       />

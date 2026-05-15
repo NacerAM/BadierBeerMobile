@@ -6,6 +6,7 @@ import { colors } from "../../../src/theme/colors";
 import { spacing } from "../../../src/theme/spacing";
 import { typography } from "../../../src/theme/typography";
 import { getPublicEventApi, participateInEventApi, PublicBreweryEvent } from "../../../src/api/publicContentApi";
+import { openMessageConversationApi } from "../../../src/api/messagesApi";
 
 function formatDateTime(value?: string | null) {
   if (!value) return "A confirmer";
@@ -27,6 +28,8 @@ export default function EventDetailScreen() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [contactingBrewer, setContactingBrewer] = useState(false);
+  const [contactingAdmin, setContactingAdmin] = useState(false);
 
   const load = useCallback(async () => {
     try {
@@ -55,6 +58,31 @@ export default function EventDetailScreen() {
       Alert.alert("Erreur", e?.message || "Impossible de participer a cet evenement");
     } finally {
       setSubmitting(false);
+    }
+  }
+
+  async function onContactBrewer() {
+    if (!event) return;
+    try {
+      setContactingBrewer(true);
+      const conversation = await openMessageConversationApi({ targetType: "EVENT", targetId: event.id });
+      router.push({ pathname: "/(user)/chat/[id]", params: { id: String(conversation.id) } } as any);
+    } catch (e: any) {
+      Alert.alert("Erreur", e?.message || "Impossible de contacter ce brasseur");
+    } finally {
+      setContactingBrewer(false);
+    }
+  }
+
+  async function onContactAdmin() {
+    try {
+      setContactingAdmin(true);
+      const conversation = await openMessageConversationApi({ targetType: "ADMIN_SUPPORT", initialMessage: `Bonjour, je souhaite signaler ou poser une question au sujet de l'evenement #${eventId}.` });
+      router.push({ pathname: "/(user)/chat/[id]", params: { id: String(conversation.id) } } as any);
+    } catch (e: any) {
+      Alert.alert("Erreur", e?.message || "Impossible de contacter l'administrateur");
+    } finally {
+      setContactingAdmin(false);
     }
   }
 
@@ -90,9 +118,13 @@ export default function EventDetailScreen() {
         {event.myParticipationStatus === "EN_ATTENTE" ? <Text style={styles.statusInfo}>Votre participation est en attente de validation.</Text> : null}
         {!event.myParticipationStatus && event.registrationClosed ? <Text style={styles.statusInfo}>Les inscriptions sont cloturees.</Text> : null}
 
-        {!event.myParticipationStatus && !event.registrationClosed ? (
-          <Button label={submitting ? "Envoi..." : "Participer a l'evenement"} onPress={onParticipate} disabled={submitting} style={styles.actionButton} />
-        ) : null}
+        <View style={styles.actionStack}>
+          <Button label={contactingBrewer ? "Ouverture..." : "Contacter le brasseur"} variant="secondary" onPress={onContactBrewer} disabled={contactingBrewer} />
+          <Button label={contactingAdmin ? "Ouverture..." : "Contacter l'admin"} variant="secondary" onPress={onContactAdmin} disabled={contactingAdmin} />
+          {!event.myParticipationStatus && !event.registrationClosed ? (
+            <Button label={submitting ? "Envoi..." : "Participer a l'evenement"} onPress={onParticipate} disabled={submitting} />
+          ) : null}
+        </View>
       </View>
     </ScrollView>
   );
@@ -116,5 +148,5 @@ const styles = StyleSheet.create({
   meta: { color: colors.muted, fontWeight: "700", marginTop: spacing.sm },
   description: { color: colors.text, lineHeight: 21, marginTop: spacing.sm },
   statusInfo: { color: colors.primaryDark, fontWeight: "900", marginTop: spacing.md },
-  actionButton: { marginTop: spacing.lg },
+  actionStack: { marginTop: spacing.lg, gap: spacing.sm },
 });

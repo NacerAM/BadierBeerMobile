@@ -37,6 +37,7 @@ export type AdminPendingEvent = {
   title: string;
   content: string;
   address?: string | null;
+  imageUrl?: string | null;
   startAt?: string | null;
   endAt?: string | null;
   registrationDeadline?: string | null;
@@ -69,4 +70,16 @@ export async function listPendingAdminPostsApi() {
 
 export async function reviewAdminPostApi(id: number, payload: { action: "validate" | "reject"; rejectReason?: string }) {
   return apiRequest<AdminPendingEvent>(`/api/admin/posts/${id}/review`, "PATCH", payload);
+}
+
+export async function createAdminPostApi(payload: {
+  title: string;
+  content: string;
+  address: string;
+  startAt: string;
+  endAt: string;
+  registrationDeadline: string;
+  imageUrl?: string;
+}) {
+  return apiRequest<AdminPendingEvent>("/api/admin/posts", "POST", payload);
 }

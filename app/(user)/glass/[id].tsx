@@ -1,4 +1,4 @@
-﻿import React, { useEffect, useMemo, useState } from "react";
+﻿import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { useLocalSearchParams, router } from "expo-router";
 import { View, Text, StyleSheet, ActivityIndicator, Image, ScrollView, Pressable, Modal, FlatList, Dimensions, Platform, ToastAndroid, Alert } from "react-native";
 import Button from "../../../src/components/Button";
@@ -7,6 +7,7 @@ import { spacing } from "../../../src/theme/spacing";
 import { getGlassApi, Glass, rateGlassApi } from "../../../src/api/glassesApi";
 import { useCollection } from "../../../src/store/useCollection";
 import { useAuth } from "../../../src/store/useAuth";
+import { openMessageConversationApi } from "../../../src/api/messagesApi";
 
 function showToast(msg: string) {
   if (Platform.OS === "android") ToastAndroid.show(msg, ToastAndroid.SHORT);
@@ -26,6 +27,7 @@ export default function GlassDetailUserScreen() {
   const [myRating, setMyRating] = useState<number | null>(null);
   const [viewerVisible, setViewerVisible] = useState(false);
   const [viewerIndex, setViewerIndex] = useState(0);
+  const [contactingAdmin, setContactingAdmin] = useState(false);
 
   async function load() {
     try {
@@ -47,6 +49,7 @@ export default function GlassDetailUserScreen() {
 
   const inCollection = has(glassId);
   const isOwner = (glass?.createdBy?.id != null) && (glass.createdBy.id === (user as any)?.id);
+  const isAdmin = user?.role === "ADMIN";
 
   const primaryImage = useMemo(() => {
     return glass?.images?.find((img) => img.isPrimary)?.url || glass?.images?.[0]?.url;
@@ -76,6 +79,18 @@ export default function GlassDetailUserScreen() {
       setGlass((prev) => (prev ? { ...prev, avgRating: r.avgRating, ratingsCount: r.ratingsCount } : prev));
     } catch (e: any) {
       setError(e?.message || "Échec de la notation");
+    }
+  }
+
+  async function onContactAdmin() {
+    try {
+      setContactingAdmin(true);
+      const conversation = await openMessageConversationApi({ targetType: "GLASS", targetId: glassId });
+      router.push({ pathname: "/(user)/chat/[id]", params: { id: String(conversation.id) } } as any);
+    } catch (e: any) {
+      Alert.alert("Erreur", e?.message || "Impossible de contacter l'administrateur");
+    } finally {
+      setContactingAdmin(false);
     }
   }
 
@@ -139,7 +154,7 @@ export default function GlassDetailUserScreen() {
         <Text style={styles.title}>{glass.name}</Text>
         <Text style={styles.brand}>{glass.Manufacturer?.name || "—"}</Text>
 
-        <View style={[styles.section, { flexDirection: "row", alignItems: "center", justifyContent: "space-between" }]}>
+        <View style={[styles.section, { flexDirection: "row", alignItems: "center", justifyContent: "space-between" }]}> 
           <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
             <Stars value={Number(glass.avgRating || 0)} />
             <Text style={{ color: colors.muted, fontSize: 12 }}>({glass.ratingsCount || 0})</Text>
@@ -161,6 +176,12 @@ export default function GlassDetailUserScreen() {
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Description</Text>
             <Text style={styles.description}>{glass.description}</Text>
+          </View>
+        ) : null}
+
+        {!isAdmin ? (
+          <View style={{ marginTop: spacing.lg }}>
+            <Button label={contactingAdmin ? "Ouverture..." : "Contacter l'admin au sujet de ce verre"} variant="secondary" onPress={onContactAdmin} disabled={contactingAdmin} />
           </View>
         ) : null}
 

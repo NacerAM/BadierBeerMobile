@@ -1,18 +1,23 @@
 ﻿import React, { useCallback, useEffect, useMemo, useState } from "react";
-import { View, Text, StyleSheet, ActivityIndicator, Image, FlatList, Pressable } from "react-native";
+import { View, Text, StyleSheet, ActivityIndicator, Image, FlatList, Pressable, Alert } from "react-native";
 import { useLocalSearchParams, router } from "expo-router";
 import { colors } from "../../../src/theme/colors";
 import { spacing } from "../../../src/theme/spacing";
 import { typography } from "../../../src/theme/typography";
+import Button from "../../../src/components/Button";
 import { getPublicUserApi, listUserCollectionApi, PublicUser } from "../../../src/api/usersApi";
+import { openMessageConversationApi } from "../../../src/api/messagesApi";
+import { useAuth } from "../../../src/store/useAuth";
 
 export default function PublicProfileScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const userId = Number(id);
+  const { user: authUser } = useAuth();
   const [user, setUser] = useState<PublicUser | null>(null);
   const [items, setItems] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [contacting, setContacting] = useState(false);
 
   const load = useCallback(async () => {
     try {
@@ -25,6 +30,19 @@ export default function PublicProfileScreen() {
   useEffect(() => { load(); }, [load]);
 
   const primaryImageUrl = (g: any) => g?.images?.find((i: any) => i.isPrimary)?.url || g?.images?.[0]?.url || null;
+  const canAdminContact = authUser?.role === 'ADMIN' && authUser?.id !== userId;
+
+  async function onContact() {
+    try {
+      setContacting(true);
+      const conversation = await openMessageConversationApi({ targetType: 'DIRECT', targetId: userId });
+      router.push({ pathname: '/(user)/chat/[id]', params: { id: String(conversation.id) } } as any);
+    } catch (e: any) {
+      Alert.alert('Erreur', e?.message || "Impossible d'ouvrir cette conversation");
+    } finally {
+      setContacting(false);
+    }
+  }
 
   if (loading) return <View style={styles.center}><ActivityIndicator /><Text style={styles.muted}>Chargement…</Text></View>;
   if (error || !user) return <View style={styles.center}><Text style={styles.error}>{error || 'Profil introuvable'}</Text></View>;
@@ -42,8 +60,9 @@ export default function PublicProfileScreen() {
         <View style={{ flex: 1 }}>
           <Text style={styles.username}>@{user.username}</Text>
           <Text style={styles.muted}>Membre depuis {new Date(user.createdAt || '').toLocaleDateString()}</Text>
-        <Text style={{ marginHorizontal: spacing.lg, marginTop: spacing.md, color: colors.text }}>{user.bio || ''}</Text>
-      </View>
+          <Text style={{ marginTop: spacing.md, color: colors.text }}>{user.bio || ''}</Text>
+          {canAdminContact ? <Button label={contacting ? 'Ouverture...' : `Contacter ${user.username}`} onPress={onContact} style={styles.contactButton} disabled={contacting} /> : null}
+        </View>
       </View>
 
       <Text style={{ marginHorizontal: spacing.lg, marginTop: spacing.md, fontWeight: '900', color: colors.text }}>Collection</Text>
@@ -75,10 +94,10 @@ const styles = StyleSheet.create({
   username: { fontSize: 18, fontWeight: '900', color: colors.text },
   muted: { color: colors.muted },
   error: { color: colors.dangerText, fontWeight: '900' },
+  contactButton: { marginTop: spacing.md },
   card: { borderRadius: 14, backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border, padding: spacing.sm },
   cardImage: { height: 120, borderRadius: 10, backgroundColor: colors.bg2, alignItems: 'center', justifyContent: 'center', overflow: 'hidden', marginBottom: 8 },
   cardTitle: { fontWeight: '900', color: colors.text },
   cardSubtitle: { color: colors.muted, marginTop: 2 },
+  center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
 });
-
-
