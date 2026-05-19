@@ -1,6 +1,7 @@
 ﻿import React, { useCallback, useEffect, useState } from "react";
 import { View, Text, StyleSheet, FlatList, TextInput, KeyboardAvoidingView, Platform, Pressable, Alert } from "react-native";
 import { router, useFocusEffect, useLocalSearchParams } from "expo-router";
+import Ionicons from "@expo/vector-icons/Ionicons";
 import Button from "../../../src/components/Button";
 import { colors } from "../../../src/theme/colors";
 import { spacing } from "../../../src/theme/spacing";
@@ -69,12 +70,14 @@ export default function ChatScreen() {
       keyboardVerticalOffset={90}
     >
       <View style={styles.topBar}>
-        <Pressable onPress={() => router.back()} hitSlop={10}><Text style={styles.back}>‹</Text></Pressable>
+        <Pressable onPress={() => router.back()} style={styles.backBtn} hitSlop={10}>
+          <Ionicons name="chevron-back" size={20} color={colors.text as any} />
+        </Pressable>
         <View style={styles.headerBody}>
           <Text style={styles.title}>{conversation.counterpart?.username || "Conversation"}</Text>
           <Text style={styles.subtitle}>{conversation.topicLabel}</Text>
         </View>
-        <View style={{ width: 30 }} />
+        <View style={{ width: 40 }} />
       </View>
 
       <FlatList
@@ -113,7 +116,7 @@ export default function ChatScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, paddingTop: spacing.lg, paddingHorizontal: spacing.md, backgroundColor: colors.bg },
   topBar: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: spacing.sm },
-  back: { fontSize: 26, fontWeight: "900", color: colors.text, marginTop: -2 },
+  backBtn: { width: 40, height: 40, borderRadius: 12, backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border, alignItems: "center", justifyContent: "center", shadowColor: colors.shadow as any, shadowOpacity: 0.15, shadowRadius: 10, shadowOffset: { width: 0, height: 6 }, elevation: 2 },
   headerBody: { flex: 1, alignItems: "center" },
   title: { fontSize: typography.h2, fontWeight: "800", color: colors.text },
   subtitle: { color: colors.muted, marginTop: 2, fontSize: 12 },

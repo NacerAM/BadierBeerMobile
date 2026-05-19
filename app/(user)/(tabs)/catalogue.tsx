@@ -2,6 +2,7 @@
 import { View, Text, StyleSheet, FlatList, Pressable, TextInput, ActivityIndicator, Image } from "react-native";
 import { useFocusEffect } from "@react-navigation/native";
 import { router } from "expo-router";
+import Ionicons from "@expo/vector-icons/Ionicons";
 import { colors } from "../../../src/theme/colors";
 import { spacing } from "../../../src/theme/spacing";
 import { typography } from "../../../src/theme/typography";
@@ -73,7 +74,7 @@ export default function CatalogueUserScreen() {
         </Pressable>
       </View>
       <View style={styles.searchWrap}>
-        <Text style={styles.searchIcon}>🔎</Text>
+        <Ionicons name="search-outline" size={18} color={colors.muted as any} />
         <TextInput value={q} onChangeText={setQ} placeholder="Rechercher…" placeholderTextColor={colors.muted} style={styles.search} autoCapitalize="none" />
       </View>
 
@@ -121,7 +122,6 @@ const styles = StyleSheet.create({
   container: { flex: 1, paddingTop: spacing.lg, paddingHorizontal: spacing.lg, backgroundColor: colors.bg },
   title: { fontSize: typography.h1, fontWeight: '800', color: colors.text, marginBottom: spacing.md, textAlign: 'center' },
   searchWrap: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.card, paddingHorizontal: spacing.md, paddingVertical: spacing.sm, borderRadius: 16, marginBottom: spacing.lg },
-  searchIcon: { color: colors.muted, fontSize: 16, fontWeight: '900' },
   search: { flex: 1, color: colors.text, paddingVertical: 2 },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 10 },
   centerText: { color: colors.muted },

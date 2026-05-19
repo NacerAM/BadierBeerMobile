@@ -29,6 +29,15 @@ type FormErrors = {
   vatNumber?: string;
 };
 
+function normalizeBelgianVat(value: string) {
+  return value.replace(/[\s.-]/g, "").toUpperCase();
+}
+
+function isValidBelgianVat(value: string) {
+  const normalized = normalizeBelgianVat(value);
+  return /^(BE)?[01]\d{9}$/.test(normalized);
+}
+
 export default function RegisterScreen() {
   const [accountType, setAccountType] = useState<AccountType>("USER");
   const [username, setUsername] = useState("");
@@ -42,20 +51,25 @@ export default function RegisterScreen() {
 
   const helperText = useMemo(() => {
     return isBrewer
-      ? "Choisissez Société pour créer un compte brasseur. Le numéro de TVA est obligatoire."
+      ? "Choisissez Société pour créer un compte brasseur. Le numéro de TVA belge est obligatoire, par exemple BE0123456789."
       : "Choisissez Particulier pour créer un compte utilisateur classique.";
   }, [isBrewer]);
 
   async function onSubmit() {
     const e: FormErrors = {};
+    const normalizedVatNumber = normalizeBelgianVat(vatNumber.trim());
+
     if (!username.trim()) e.username = "Nom d’utilisateur requis";
     if (!email.trim()) e.email = "Email requis";
     if (!password.trim()) e.password = "Mot de passe requis";
     if (confirm !== password) e.confirm = "Les mots de passe ne correspondent pas";
     if (isBrewer && !breweryName.trim()) e.breweryName = "Nom de société requis";
     if (isBrewer && !vatNumber.trim()) e.vatNumber = "Numéro de TVA requis";
-    setErrors(e);
+    if (isBrewer && vatNumber.trim() && !isValidBelgianVat(vatNumber)) {
+      e.vatNumber = "Introduisez un numéro de TVA belge valide, par exemple BE0123456789";
+    }
 
+    setErrors(e);
     if (Object.keys(e).length > 0) return;
 
     try {
@@ -65,7 +79,7 @@ export default function RegisterScreen() {
             email: email.trim(),
             password: password.trim(),
             breweryName: breweryName.trim(),
-            vatNumber: vatNumber.trim(),
+            vatNumber: normalizedVatNumber,
           })
         : await registerApi(username.trim(), email.trim(), password.trim());
 
@@ -93,7 +107,6 @@ export default function RegisterScreen() {
         showsVerticalScrollIndicator={false}
       >
         <Text style={styles.title}>Inscription</Text>
-        <Text style={styles.subtitle}>Créez un compte particulier ou société depuis le même formulaire.</Text>
 
         <View style={styles.segmentWrap}>
           <Pressable
@@ -144,7 +157,6 @@ const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.bg },
   content: { padding: spacing.lg, paddingBottom: spacing.xl * 3 },
   title: { fontSize: typography.h1, fontWeight: "700", marginBottom: spacing.sm, color: colors.text },
-  subtitle: { color: colors.muted, marginBottom: spacing.lg },
   segmentWrap: {
     flexDirection: "row",
     gap: spacing.sm,

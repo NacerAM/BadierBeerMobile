@@ -1,18 +1,19 @@
 ﻿import React, { useState } from "react";
 import { View, Text, StyleSheet, ScrollView, Pressable, Alert } from "react-native";
+import { router } from "expo-router";
+import Ionicons from "@expo/vector-icons/Ionicons";
 import { colors } from "../../../src/theme/colors";
 import { spacing } from "../../../src/theme/spacing";
 import { typography } from "../../../src/theme/typography";
 import Input from "../../../src/components/Input";
 import Button from "../../../src/components/Button";
 import { changePasswordApi } from "../../../src/api/authApi";
-import { router } from "expo-router";
 
 export default function SettingsScreen() {
   const [oldPassword, setOldPassword] = useState("");
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
-  const [errors, setErrors] = useState<{old?: string; password?: string; confirm?: string}>({});
+  const [errors, setErrors] = useState<{ old?: string; password?: string; confirm?: string }>({});
   const [loading, setLoading] = useState(false);
 
   function validate() {
@@ -31,7 +32,9 @@ export default function SettingsScreen() {
       setLoading(true);
       const res = await changePasswordApi(oldPassword.trim(), password.trim());
       Alert.alert("Succès", res.message || "Mot de passe mis à jour");
-      setOldPassword(""); setPassword(""); setConfirm("");
+      setOldPassword("");
+      setPassword("");
+      setConfirm("");
     } catch (e: any) {
       const msg = e?.data?.message || e?.message || "Erreur inconnue";
       if (msg.toLowerCase().includes("ancien mot de passe")) {
@@ -39,17 +42,19 @@ export default function SettingsScreen() {
       } else {
         Alert.alert("Erreur", msg);
       }
-    } finally { setLoading(false); }
+    } finally {
+      setLoading(false);
+    }
   }
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={{ paddingBottom: spacing.xl }}>
       <View style={styles.topBar}>
-        <Pressable onPress={() => router.push("/(user)/(tabs)/profile" as any)} hitSlop={10}>
-          <Text style={styles.back}>‹</Text>
+        <Pressable style={styles.backBtn} onPress={() => router.push("/(user)/(tabs)/profile" as any)} hitSlop={10}>
+          <Ionicons name="chevron-back" size={20} color={colors.text as any} />
         </Pressable>
         <Text style={styles.topTitle}>Favoris et paramètres</Text>
-        <View style={{ width: 24 }} />
+        <View style={{ width: 44 }} />
       </View>
 
       <View style={styles.card}>
@@ -65,9 +70,23 @@ export default function SettingsScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.bg },
-  topBar: { paddingTop: spacing.xl, paddingBottom: spacing.md, alignItems: 'center', flexDirection: 'row', justifyContent: 'space-between', paddingHorizontal: spacing.lg },
-  topTitle: { fontSize: typography.h1, fontWeight: '900', color: colors.text },
-  back: { fontSize: 28, color: colors.text, fontWeight: '900' },
+  topBar: { paddingTop: spacing.xl, paddingBottom: spacing.md, alignItems: "center", flexDirection: "row", justifyContent: "space-between", paddingHorizontal: spacing.lg },
+  topTitle: { fontSize: typography.h1, fontWeight: "900", color: colors.text },
+  backBtn: {
+    width: 44,
+    height: 44,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.card,
+    alignItems: "center",
+    justifyContent: "center",
+    shadowColor: colors.shadow as any,
+    shadowOpacity: 0.12,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 6 },
+    elevation: 2,
+  },
   card: {
     marginHorizontal: spacing.lg,
     padding: spacing.lg,
@@ -80,5 +99,5 @@ const styles = StyleSheet.create({
     shadowRadius: 12,
     shadowOffset: { width: 0, height: 8 },
   },
-  sectionTitle: { fontWeight: '900', color: colors.text, marginBottom: spacing.sm, fontSize: 16 },
+  sectionTitle: { fontWeight: "900", color: colors.text, marginBottom: spacing.sm, fontSize: 16 },
 });

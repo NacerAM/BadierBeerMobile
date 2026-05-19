@@ -59,7 +59,7 @@ export default function CataloguePublicScreen() {
       <Text style={styles.title}>Catalogue public</Text>
 
       <View style={styles.searchWrap}>
-        <Text style={styles.searchIcon}>⌥</Text>
+        <Ionicons name="search-outline" size={18} color={colors.muted as any} />
         <TextInput
           value={q}
           onChangeText={setQ}
@@ -114,7 +114,7 @@ export default function CataloguePublicScreen() {
         />
       )}
 
-          </View>
+    </View>
   );
 }
 
@@ -122,7 +122,6 @@ const styles = StyleSheet.create({
   container: { flex: 1, paddingTop: spacing.lg, paddingHorizontal: spacing.lg, backgroundColor: colors.bg },
   title: { fontSize: typography.h1, fontWeight: '900', color: colors.text, marginBottom: spacing.md, textAlign: 'center' },
   searchWrap: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.card, paddingHorizontal: spacing.md, paddingVertical: spacing.sm, borderRadius: 16, marginBottom: spacing.lg, shadowColor: colors.shadow as any, shadowOpacity: 0.15, shadowRadius: 10, shadowOffset: { width: 0, height: 6 }, elevation: 2 },
-  searchIcon: { color: colors.muted, fontSize: 16, fontWeight: '900' },
   search: { flex: 1, color: colors.text, paddingVertical: 2 },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 10 },
   centerText: { color: colors.muted },
@@ -138,4 +137,3 @@ const styles = StyleSheet.create({
   cardSubtitle: { marginTop: 4, color: colors.muted, fontSize: 12 },
   empty: { marginTop: spacing.lg, textAlign: 'center', color: colors.muted },
 });
-

@@ -50,7 +50,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     overflow: "hidden",
-
     shadowColor: colors.shadow as any,
     shadowOpacity: 0.25,
     shadowRadius: 12,
@@ -71,10 +70,12 @@ const styles = StyleSheet.create({
   text: {
     fontWeight: "800",
     fontSize: 15,
+    lineHeight: 18,
     color: "#2E1A0F",
     letterSpacing: 0.3,
-  
     backgroundColor: "transparent",
+    includeFontPadding: false,
+    textAlignVertical: "center",
   },
 
   textSecondary: {
@@ -90,7 +91,3 @@ const styles = StyleSheet.create({
     opacity: 0.5,
   },
 });
-
-
-
-

@@ -1,6 +1,7 @@
 ﻿import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { View, Text, StyleSheet, FlatList, Pressable, TextInput, ActivityIndicator, Image } from "react-native";
 import { useFocusEffect } from "@react-navigation/native";
+import Ionicons from "@expo/vector-icons/Ionicons";
 import { colors } from "../../src/theme/colors";
 import { spacing } from "../../src/theme/spacing";
 import { typography } from "../../src/theme/typography";
@@ -118,7 +119,7 @@ export default function ExploreVisitorScreen() {
       </View>
 
       <View style={styles.searchWrap}>
-        <Text style={styles.searchIcon}>Rech.</Text>
+        <Ionicons name="search-outline" size={18} color={colors.muted as any} style={styles.searchIcon} />
         <TextInput
           value={q}
           onChangeText={setQ}
@@ -164,7 +165,7 @@ const styles = StyleSheet.create({
   segmentText: { color: colors.text, fontWeight: "900" },
   segmentTextActive: { color: "#2E1A0F" },
   searchWrap: { flexDirection: "row", alignItems: "center", gap: spacing.sm, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.card, paddingHorizontal: spacing.md, paddingVertical: spacing.sm, borderRadius: 16, marginBottom: spacing.lg },
-  searchIcon: { color: colors.muted, fontSize: 12, fontWeight: "900" },
+  searchIcon: { marginRight: 2 },
   search: { flex: 1, color: colors.text, paddingVertical: 2 },
   center: { flex: 1, alignItems: "center", justifyContent: "center", gap: 10 },
   centerText: { color: colors.muted },

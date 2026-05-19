@@ -1,6 +1,7 @@
 ﻿import React, { useCallback, useEffect, useState } from "react";
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { router, useFocusEffect, usePathname } from "expo-router";
+import Ionicons from "@expo/vector-icons/Ionicons";
 import Button from "../../src/components/Button";
 import { colors } from "../../src/theme/colors";
 import { spacing } from "../../src/theme/spacing";
@@ -54,14 +55,25 @@ export default function NotificationsScreen() {
     }
   }, []);
 
-  useEffect(() => { load(); }, [load]);
-  useFocusEffect(useCallback(() => { load(); }, [load]));
+  useEffect(() => {
+    load();
+  }, [load]);
+
+  useFocusEffect(
+    useCallback(() => {
+      load();
+    }, [load])
+  );
 
   async function openNotification(item: AppNotification) {
     try {
       if (!item.readAt) {
         await markNotificationReadApi(item.id);
-        setItems((current) => current.map((entry) => entry.id === item.id ? { ...entry, readAt: new Date().toISOString() } : entry));
+        setItems((current) =>
+          current.map((entry) =>
+            entry.id === item.id ? { ...entry, readAt: new Date().toISOString() } : entry
+          )
+        );
         setUnreadCount((current) => Math.max(0, current - 1));
       }
     } catch {}
@@ -78,7 +90,7 @@ export default function NotificationsScreen() {
     }
   }
 
-  async function openProfileFromNotification(item: AppNotification) {
+  function openProfileFromNotification(item: AppNotification) {
     if (!item.payload?.fromUserId) return;
     router.push({ pathname: "/(user)/profile/[id]", params: { id: String(item.payload.fromUserId) } } as any);
   }
@@ -87,7 +99,9 @@ export default function NotificationsScreen() {
     try {
       setMarkingAll(true);
       await markAllNotificationsReadApi();
-      setItems((current) => current.map((item) => ({ ...item, readAt: item.readAt || new Date().toISOString() })));
+      setItems((current) =>
+        current.map((item) => ({ ...item, readAt: item.readAt || new Date().toISOString() }))
+      );
       setUnreadCount(0);
     } catch (e: any) {
       setError(e?.message || "Impossible de marquer les notifications");
@@ -99,23 +113,47 @@ export default function NotificationsScreen() {
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       <View style={styles.topBar}>
-        {showBack ? <Pressable onPress={() => router.back()} hitSlop={10}><Text style={styles.back}>‹</Text></Pressable> : <View style={{ width: 30 }} />}
+        {showBack ? (
+          <Pressable style={styles.backBtn} onPress={() => router.back()} hitSlop={10}>
+            <Ionicons name="chevron-back" size={20} color={colors.text as any} />
+          </Pressable>
+        ) : (
+          <View style={{ width: 44 }} />
+        )}
         <Text style={styles.title}>Notifications</Text>
-        <View style={{ width: 30 }} />
+        <View style={{ width: 44 }} />
       </View>
 
       <View style={styles.summaryCard}>
         <Text style={styles.summaryTitle}>Centre de notifications</Text>
-        <Text style={styles.summaryText}>{unreadCount} notification{unreadCount > 1 ? "s" : ""} non lue{unreadCount > 1 ? "s" : ""}</Text>
-        <Button label={markingAll ? "Mise a jour..." : "Tout marquer comme lu"} onPress={markAllRead} disabled={markingAll || unreadCount === 0} variant="secondary" style={styles.summaryButton} />
+        <Text style={styles.summaryText}>
+          {unreadCount} notification{unreadCount > 1 ? "s" : ""} non lue{unreadCount > 1 ? "s" : ""}
+        </Text>
+        <Button
+          label={markingAll ? "Mise a jour..." : "Tout marquer comme lu"}
+          onPress={markAllRead}
+          disabled={markingAll || unreadCount === 0}
+          variant="secondary"
+          style={styles.summaryButton}
+        />
       </View>
 
       {loading ? (
-        <View style={styles.center}><ActivityIndicator /><Text style={styles.muted}>Chargement...</Text></View>
+        <View style={styles.center}>
+          <ActivityIndicator />
+          <Text style={styles.muted}>Chargement...</Text>
+        </View>
       ) : error ? (
-        <View style={styles.center}><Text style={styles.error}>{error}</Text></View>
+        <View style={styles.center}>
+          <Text style={styles.error}>{error}</Text>
+        </View>
       ) : items.length === 0 ? (
-        <View style={styles.emptyCard}><Text style={styles.emptyTitle}>Aucune notification</Text><Text style={styles.muted}>Les validations de verres, les nouvelles notes et les evenements a venir apparaitront ici.</Text></View>
+        <View style={styles.emptyCard}>
+          <Text style={styles.emptyTitle}>Aucune notification</Text>
+          <Text style={styles.muted}>
+            Les validations de verres, les nouvelles notes et les evenements a venir apparaitront ici.
+          </Text>
+        </View>
       ) : (
         items.map((item) => (
           <Pressable key={item.id} style={[styles.card, !item.readAt ? styles.cardUnread : null]} onPress={() => openNotification(item)}>
@@ -141,7 +179,21 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.bg },
   content: { padding: spacing.lg, paddingBottom: spacing.xxl },
   topBar: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: spacing.lg, marginTop: spacing.lg },
-  back: { fontSize: 26, fontWeight: "900", color: colors.text, marginTop: -2 },
+  backBtn: {
+    width: 44,
+    height: 44,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.card,
+    alignItems: "center",
+    justifyContent: "center",
+    shadowColor: colors.shadow as any,
+    shadowOpacity: 0.12,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 6 },
+    elevation: 2,
+  },
   title: { fontSize: typography.h1, fontWeight: "900", color: colors.text },
   summaryCard: { backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border, borderRadius: 18, padding: spacing.lg, marginBottom: spacing.lg },
   summaryTitle: { color: colors.text, fontWeight: "900", fontSize: 18 },

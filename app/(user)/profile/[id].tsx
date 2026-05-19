@@ -1,6 +1,7 @@
 ﻿import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { View, Text, StyleSheet, ActivityIndicator, Image, FlatList, Pressable, Alert } from "react-native";
 import { useLocalSearchParams, router } from "expo-router";
+import Ionicons from "@expo/vector-icons/Ionicons";
 import { colors } from "../../../src/theme/colors";
 import { spacing } from "../../../src/theme/spacing";
 import { typography } from "../../../src/theme/typography";
@@ -50,9 +51,9 @@ export default function PublicProfileScreen() {
   return (
     <View style={styles.container}>
       <View style={styles.topBar}>
-        <Pressable onPress={() => router.back()} hitSlop={10}><Text style={styles.back}>‹</Text></Pressable>
+        <Pressable onPress={() => router.back()} style={styles.backBtn} hitSlop={10}><Ionicons name="chevron-back" size={20} color={colors.text as any} /></Pressable>
         <Text style={styles.title}>Profil</Text>
-        <View style={{ width: 30 }} />
+        <View style={{ width: 40 }} />
       </View>
 
       <View style={styles.header}>
@@ -87,7 +88,7 @@ export default function PublicProfileScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.bg },
   topBar: { paddingTop: spacing.xl, paddingHorizontal: spacing.lg, paddingBottom: spacing.md, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  back: { fontSize: 26, fontWeight: '900', color: colors.text, marginTop: -2 },
+  backBtn: { width: 40, height: 40, borderRadius: 12, backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border, alignItems: 'center', justifyContent: 'center', shadowColor: colors.shadow as any, shadowOpacity: 0.15, shadowRadius: 10, shadowOffset: { width: 0, height: 6 }, elevation: 2 },
   title: { fontSize: typography.h1, fontWeight: '900', color: colors.text },
   header: { marginTop: spacing.lg, marginHorizontal: spacing.lg, flexDirection: 'row', gap: spacing.md, alignItems: 'center' },
   avatar: { width: 64, height: 64, borderRadius: 32, backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border },

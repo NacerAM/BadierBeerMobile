@@ -1,5 +1,6 @@
 ﻿import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { useLocalSearchParams, router } from "expo-router";
+import Ionicons from "@expo/vector-icons/Ionicons";
 import { View, Text, StyleSheet, ActivityIndicator, Image, ScrollView, Pressable, Modal, FlatList, Dimensions, Platform, ToastAndroid, Alert } from "react-native";
 import Button from "../../../src/components/Button";
 import { colors } from "../../../src/theme/colors";
@@ -121,7 +122,7 @@ export default function GlassDetailUserScreen() {
     <ScrollView style={styles.container} contentContainerStyle={{ paddingBottom: spacing.xxl }}>
       <View style={styles.topBar}>
         <Pressable onPress={() => router.back()} style={styles.backBtn} hitSlop={10}>
-          <Text style={styles.backText}>‹</Text>
+          <Ionicons name="chevron-back" size={20} color={colors.text as any} />
         </Pressable>
         <Text style={styles.topTitle} numberOfLines={1}>Détail du verre</Text>
         <View style={{ width: 40 }} />
@@ -168,9 +169,6 @@ export default function GlassDetailUserScreen() {
           ) : null}
         </View>
 
-        {isOwner ? (
-          <Text style={styles.ownerHint}>Vous ne pouvez pas noter votre propre publication.</Text>
-        ) : null}
 
         {glass.description ? (
           <View style={styles.section}>
@@ -307,7 +305,6 @@ const styles = StyleSheet.create({
   sectionTitle: { fontSize: 14, fontWeight: "900", color: colors.text, marginBottom: spacing.xs },
   description: { color: colors.text, lineHeight: 20 },
   muted: { color: colors.muted, lineHeight: 20 },
-  ownerHint: { marginTop: spacing.sm, color: colors.muted, fontStyle: "italic" },
   center: { flex: 1, alignItems: "center", justifyContent: "center", gap: 10, padding: spacing.lg },
   centerText: { color: colors.muted },
   errorText: { color: colors.dangerText, fontWeight: "900", textAlign: "center" },
@@ -316,3 +313,5 @@ const styles = StyleSheet.create({
   viewerClose: { position: "absolute", top: spacing.xl, right: spacing.xl, width: 36, height: 36, borderRadius: 18, backgroundColor: "rgba(255,255,255,0.9)", alignItems: "center", justifyContent: "center" },
   viewerCloseText: { color: "#000", fontSize: 22, fontWeight: "900", marginTop: -2 },
 });
+
+
