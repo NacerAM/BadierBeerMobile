@@ -47,6 +47,48 @@ export type AdminPendingEvent = {
   Manufacturer?: { id: number; name: string };
 };
 
+export type AdminDurationMetrics = {
+  avgSeconds: number | null;
+};
+
+export type AdminActiveProfile = {
+  id: number;
+  username: string;
+  role: "USER" | "BREWER" | "ADMIN";
+  avatarUrl?: string | null;
+  proposalsCount: number;
+  collectionCount: number;
+  ratingsCount: number;
+  messagesCount: number;
+  participationsCount: number;
+  activityScore: number;
+};
+
+export type AdminTopPublication = {
+  id: number;
+  name: string;
+  creatorUsername: string;
+  manufacturerName?: string | null;
+  avgRating: number;
+  ratingsCount: number;
+};
+
+export type AdminTopEvent = {
+  id: number;
+  title: string;
+  startAt?: string | null;
+  breweryName?: string | null;
+  participantsCount: number;
+};
+
+export type AdminStatsResponse = {
+  responseMetrics: AdminDurationMetrics;
+  processingMetrics: AdminDurationMetrics;
+  activeProfiles: AdminActiveProfile[];
+  topRatedPublications: AdminTopPublication[];
+  topEvents: AdminTopEvent[];
+};
+
 export async function listAdminAccountsApi(status?: string) {
   const query = status ? `?status=${encodeURIComponent(status)}` : "";
   return apiRequest<{ items: AdminAccount[] }>(`/api/admin/accounts${query}`, "GET");
@@ -82,4 +124,8 @@ export async function createAdminPostApi(payload: {
   imageUrl?: string;
 }) {
   return apiRequest<AdminPendingEvent>("/api/admin/posts", "POST", payload);
+}
+
+export async function getAdminStatsApi() {
+  return apiRequest<AdminStatsResponse>("/api/admin/stats", "GET");
 }

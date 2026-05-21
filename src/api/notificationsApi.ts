@@ -1,6 +1,6 @@
 ﻿import { apiRequest } from "./client";
 
-export type AppNotificationType = "GLASS_VALIDATED" | "GLASS_RATED" | "EVENT_UPCOMING";
+export type AppNotificationType = "GLASS_VALIDATED" | "GLASS_REJECTED" | "GLASS_RATED" | "EVENT_UPCOMING";
 
 export type AppNotification = {
   id: number;
@@ -10,7 +10,9 @@ export type AppNotification = {
   payload?: {
     glassId?: number;
     fromUserId?: number;
+    fromUsername?: string;
     rating?: number;
+    rejectReason?: string;
     eventId?: number;
     breweryName?: string | null;
     startAt?: string | null;

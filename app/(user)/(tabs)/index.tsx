@@ -1,7 +1,7 @@
 ﻿import React, { useCallback, useEffect, useState } from "react";
 import { useAuth } from "../../../src/store/useAuth";
 import { View, Text, StyleSheet, Image, ScrollView, Pressable } from "react-native";
-import { router, useFocusEffect } from "expo-router";
+import { Redirect, router, useFocusEffect, useLocalSearchParams } from "expo-router";
 import Button from "../../../src/components/Button";
 import { colors } from "../../../src/theme/colors";
 import { spacing } from "../../../src/theme/spacing";
@@ -10,9 +10,11 @@ import { listGlassesApi, Glass } from "../../../src/api/glassesApi";
 
 export default function UserHomeScreen() {
   const { user } = useAuth();
+  const { asUser } = useLocalSearchParams<{ asUser?: string }>();
   const [items, setItems] = useState<Glass[]>([]);
   const [loading, setLoading] = useState(true);
   const isBrewer = user?.role === "BREWER";
+  const isAdmin = user?.role === "ADMIN";
 
   const load = useCallback(async () => {
     try {
@@ -26,6 +28,10 @@ export default function UserHomeScreen() {
 
   useEffect(() => { load(); }, [load]);
   useFocusEffect(useCallback(() => { load(); }, [load]));
+
+  if (isAdmin && asUser !== "1") {
+    return <Redirect href="/(user)/(tabs)/admin" />;
+  }
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>

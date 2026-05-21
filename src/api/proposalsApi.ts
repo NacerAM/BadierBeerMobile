@@ -14,8 +14,22 @@ export type ProposeGlassResponse = {
   status?: string;
 };
 
+export type MyProposal = {
+  id: number;
+  name: string;
+  description?: string | null;
+  status: "EN_ATTENTE" | "VALIDE" | "REJETE";
+  rejectReason?: string | null;
+  Manufacturer?: { id: number; name: string };
+  beer?: { id: number; name: string } | null;
+  images?: { id: number; url: string; isPrimary?: boolean }[];
+  avgRating?: number | null;
+  ratingsCount?: number;
+  createdAt?: string;
+};
+
 export type MyProposalsResponse = {
-  items: any[];
+  items: MyProposal[];
 };
 
 export async function proposeGlassApi(payload: ProposeGlassPayload) {

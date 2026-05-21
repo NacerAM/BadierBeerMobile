@@ -26,6 +26,8 @@ export default function GlassDetailUserScreen() {
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [myRating, setMyRating] = useState<number | null>(null);
+  const [selectedRating, setSelectedRating] = useState<number | null>(null);
+  const [ratingSubmitting, setRatingSubmitting] = useState(false);
   const [viewerVisible, setViewerVisible] = useState(false);
   const [viewerIndex, setViewerIndex] = useState(0);
   const [contactingAdmin, setContactingAdmin] = useState(false);
@@ -37,6 +39,8 @@ export default function GlassDetailUserScreen() {
       await refresh();
       const g = await getGlassApi(glassId);
       setGlass(g);
+      setMyRating(g.myRating ?? null);
+      setSelectedRating(null);
     } catch (e: any) {
       setError(e?.message || "Erreur réseau");
     } finally {
@@ -72,16 +76,22 @@ export default function GlassDetailUserScreen() {
     }
   }
 
-  async function onRate(n: number) {
-    if (isOwner) return;
+  async function onRate() {
+    if (isOwner || myRating != null || selectedRating == null) return;
     try {
-      const r = await rateGlassApi(glassId, n);
+      setRatingSubmitting(true);
+      setError(null);
+      const r = await rateGlassApi(glassId, selectedRating);
       setMyRating(r.myRating);
-      setGlass((prev) => (prev ? { ...prev, avgRating: r.avgRating, ratingsCount: r.ratingsCount } : prev));
+      setSelectedRating(null);
+      setGlass((prev) => (prev ? { ...prev, avgRating: r.avgRating, ratingsCount: r.ratingsCount, myRating: r.myRating } : prev));
     } catch (e: any) {
       setError(e?.message || "Échec de la notation");
+    } finally {
+      setRatingSubmitting(false);
     }
   }
+
 
   async function onContactAdmin() {
     try {
@@ -161,11 +171,26 @@ export default function GlassDetailUserScreen() {
             <Text style={{ color: colors.muted, fontSize: 12 }}>({glass.ratingsCount || 0})</Text>
           </View>
           {!isOwner ? (
-            <View style={{ flexDirection: "row", gap: 6 }}>
-              {[1, 2, 3, 4, 5].map((n) => (
-                <Text key={n} onPress={() => onRate(n)} style={{ color: (myRating || 0) >= n ? colors.primaryDark : colors.text, fontSize: 18 }}>★</Text>
-              ))}
-            </View>
+            myRating != null ? (
+              <View style={styles.ratingBox}>
+                <Text style={styles.ratingLabel}>Votre note</Text>
+                <Stars value={myRating} size={18} />
+              </View>
+            ) : (
+              <View style={styles.ratingBox}>
+                <View style={{ flexDirection: "row", gap: 6 }}>
+                  {[1, 2, 3, 4, 5].map((n) => (
+                    <Text key={n} onPress={() => setSelectedRating(n)} style={{ color: (selectedRating || 0) >= n ? colors.primaryDark : colors.text, fontSize: 22 }}>★</Text>
+                  ))}
+                </View>
+                <Button
+                  label={ratingSubmitting ? "Validation..." : "Valider ma note"}
+                  onPress={onRate}
+                  disabled={selectedRating == null || ratingSubmitting}
+                  style={styles.ratingButton}
+                />
+              </View>
+            )
           ) : null}
         </View>
 
@@ -305,6 +330,9 @@ const styles = StyleSheet.create({
   sectionTitle: { fontSize: 14, fontWeight: "900", color: colors.text, marginBottom: spacing.xs },
   description: { color: colors.text, lineHeight: 20 },
   muted: { color: colors.muted, lineHeight: 20 },
+  ratingBox: { alignItems: "flex-end", gap: spacing.sm },
+  ratingLabel: { color: colors.muted, fontSize: 12, fontWeight: "700" },
+  ratingButton: { minWidth: 140 },
   center: { flex: 1, alignItems: "center", justifyContent: "center", gap: 10, padding: spacing.lg },
   centerText: { color: colors.muted },
   errorText: { color: colors.dangerText, fontWeight: "900", textAlign: "center" },

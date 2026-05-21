@@ -9,28 +9,41 @@ import { router, useFocusEffect } from "expo-router";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { getMyStatsApi, MyStats } from "../../../src/api/usersApi";
 import { listNotificationsApi } from "../../../src/api/notificationsApi";
+import { AdminStatsResponse, getAdminStatsApi } from "../../../src/api/adminApi";
+
+function formatDuration(seconds?: number | null) {
+  if (seconds == null || Number.isNaN(seconds)) return "Aucune donnee";
+  if (seconds < 60) return `${seconds} sec`;
+  const hours = Math.floor(seconds / 3600);
+  const minutes = Math.floor((seconds % 3600) / 60);
+  if (hours <= 0) return `${minutes} min`;
+  if (minutes <= 0) return `${hours} h`;
+  return `${hours} h ${minutes} min`;
+}
 
 export default function Profile() {
   const { user, logout } = useAuth();
   const [viewerVisible, setViewerVisible] = useState(false);
   const [stats, setStats] = useState<MyStats | null>(null);
+  const [adminStats, setAdminStats] = useState<AdminStatsResponse | null>(null);
   const [unreadCount, setUnreadCount] = useState(0);
   const isBrewer = user?.role === "BREWER";
   const isAdmin = user?.role === "ADMIN";
 
   const load = useCallback(async () => {
     try {
-      const [statsRes, notificationsRes] = await Promise.all([
-        getMyStatsApi(),
-        listNotificationsApi(),
-      ]);
+      const tasks: Promise<any>[] = [getMyStatsApi(), listNotificationsApi()];
+      if (isAdmin) tasks.push(getAdminStatsApi());
+      const [statsRes, notificationsRes, adminStatsRes] = await Promise.all(tasks);
       setStats(statsRes);
       setUnreadCount(notificationsRes.unreadCount ?? 0);
+      setAdminStats(isAdmin ? (adminStatsRes as AdminStatsResponse) : null);
     } catch {
       setStats(null);
+      setAdminStats(null);
       setUnreadCount(0);
     }
-  }, []);
+  }, [isAdmin]);
 
   useEffect(() => { load(); }, [load]);
   useFocusEffect(useCallback(() => { load(); }, [load]));
@@ -72,7 +85,6 @@ export default function Profile() {
         </View>
         <Text style={styles.name}>{user?.username || "Utilisateur"}</Text>
         <Text style={styles.email}>{user?.email || "—"}</Text>
-        <Text style={styles.roleLine}>Role: {user?.role || "—"}</Text>
         {(user as any)?.bio ? <Text style={{ marginTop: spacing.sm, color: colors.text, textAlign: "center" }}>{(user as any).bio}</Text> : null}
         <View style={{ marginTop: spacing.sm }}>
           <Button label="Editer" variant="secondary" onPress={() => router.push("/(user)/(tabs)/edit-profile" as any)} />
@@ -81,26 +93,39 @@ export default function Profile() {
 
       <View style={styles.item}>
         <Text style={styles.itemTitle}>Mes statistiques</Text>
-        <View style={styles.statsRow}>
-          <View style={styles.statBox}>
-            <Text style={styles.statValue}>{formatRating(stats?.averageRating)}</Text>
-            <Text style={styles.statLabel}>Note moyenne</Text>
+        {isAdmin ? (
+          <View style={styles.adminStatsWrap}>
+            <View style={styles.adminStatLine}>
+              <Text style={styles.adminStatLabel}>Duree moyenne de reponse aux messages</Text>
+              <Text style={styles.adminStatValue}>{formatDuration(adminStats?.responseMetrics?.avgSeconds)}</Text>
+            </View>
+            <View style={styles.adminStatLine}>
+              <Text style={styles.adminStatLabel}>Duree moyenne de traitement des demandes</Text>
+              <Text style={styles.adminStatValue}>{formatDuration(adminStats?.processingMetrics?.avgSeconds)}</Text>
+            </View>
           </View>
-          <View style={styles.statBox}>
-            <Text style={styles.statValue}>{formatRating(stats?.bestRating)}</Text>
-            <Text style={styles.statLabel}>Meilleure note</Text>
+        ) : (
+          <View style={styles.statsRow}>
+            <View style={styles.statBox}>
+              <Text style={styles.statValue}>{formatRating(stats?.averageRating)}</Text>
+              <Text style={styles.statLabel}>Note moyenne</Text>
+            </View>
+            <View style={styles.statBox}>
+              <Text style={styles.statValue}>{formatRating(stats?.bestRating)}</Text>
+              <Text style={styles.statLabel}>Meilleure note</Text>
+            </View>
+            <View style={styles.statBox}>
+              <Text style={styles.statValue}>{stats?.totalPublications ?? 0}</Text>
+              <Text style={styles.statLabel}>Publications</Text>
+            </View>
           </View>
-          <View style={styles.statBox}>
-            <Text style={styles.statValue}>{stats?.totalPublications ?? 0}</Text>
-            <Text style={styles.statLabel}>Publications</Text>
-          </View>
-        </View>
+        )}
       </View>
 
       {isAdmin ? (
-        <Pressable style={styles.item} onPress={() => router.push("/(user)/(tabs)/admin" as any)}>
-          <Text style={styles.itemTitle}>Espace administrateur</Text>
-          <Text style={styles.itemSub}>Validation des comptes, verres et evenements</Text>
+        <Pressable style={styles.item} onPress={() => router.push("/(user)/admin-stats" as any)}>
+          <Text style={styles.itemTitle}>Statistiques</Text>
+          <Text style={styles.itemSub}>Profils actifs, publications les mieux notees et evenements les plus frequentes</Text>
           <Text style={styles.itemArrow}>›</Text>
         </Pressable>
       ) : null}
@@ -108,12 +133,6 @@ export default function Profile() {
       <Pressable style={styles.item} onPress={() => router.push("/(user)/notifications" as any)}>
         <Text style={styles.itemTitle}>Notifications</Text>
         <Text style={styles.itemSub}>{unreadCount} notification{unreadCount > 1 ? "s" : ""} non lue{unreadCount > 1 ? "s" : ""}</Text>
-        <Text style={styles.itemArrow}>›</Text>
-      </Pressable>
-
-      <Pressable style={styles.item} onPress={() => router.push("/(user)/(tabs)/proposals" as any)}>
-        <Text style={styles.itemTitle}>Suivi des propositions</Text>
-        <Text style={styles.itemSub}>Consultez l'etat de vos propositions</Text>
         <Text style={styles.itemArrow}>›</Text>
       </Pressable>
 
@@ -188,7 +207,6 @@ const styles = StyleSheet.create({
   badgeText: { color: colors.badgeText, fontWeight: "900", fontSize: 12 },
   name: { marginTop: spacing.sm, fontSize: 22, fontWeight: "900", color: colors.text },
   email: { marginTop: 2, color: colors.muted },
-  roleLine: { marginTop: spacing.xs, color: colors.primaryDark, fontWeight: "900" },
   item: {
     marginTop: spacing.md,
     marginHorizontal: spacing.lg,
@@ -203,12 +221,16 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 6 },
   },
   itemTitle: { fontWeight: "900", color: colors.text },
-  itemSub: { color: colors.muted, marginTop: 2 },
+  itemSub: { color: colors.muted, marginTop: 2, paddingRight: 28 },
   itemArrow: { position: "absolute", right: spacing.md, top: "50%", marginTop: -14, fontSize: 26, color: colors.muted, fontWeight: "900" },
   statsRow: { flexDirection: "row", gap: spacing.sm, marginTop: spacing.md },
   statBox: { flex: 1, backgroundColor: colors.bg2, borderRadius: 14, paddingVertical: spacing.md, paddingHorizontal: spacing.sm, alignItems: "center" },
   statValue: { color: colors.text, fontWeight: "900", fontSize: 18 },
   statLabel: { color: colors.muted, marginTop: 4, fontSize: 12, textAlign: "center" },
+  adminStatsWrap: { marginTop: spacing.md, gap: spacing.sm },
+  adminStatLine: { backgroundColor: colors.bg2, borderRadius: 14, padding: spacing.md },
+  adminStatLabel: { color: colors.muted, fontWeight: "700" },
+  adminStatValue: { color: colors.text, fontWeight: "900", fontSize: 18, marginTop: 4 },
   viewerOverlay: { flex: 1, backgroundColor: "black", alignItems: "center", justifyContent: "center" },
   viewerImage: { width: "100%", height: "100%" },
   viewerClose: { position: "absolute", top: 40, right: 16, zIndex: 5, elevation: 5 },

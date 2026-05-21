@@ -188,7 +188,7 @@ export default function AdminScreen() {
       <View style={styles.topBar}>
         <View style={{ width: 30 }} />
         <Text style={styles.title}>Espace administrateur</Text>
-        <Pressable onPress={() => router.replace("/(user)/(tabs)" as any)} hitSlop={10}>
+        <Pressable onPress={() => router.replace({ pathname: "/(user)/(tabs)", params: { asUser: "1" } } as any)} hitSlop={10}>
           <Text style={styles.switchLink}>Voir en tant qu'utilisateur</Text>
         </Pressable>
       </View>

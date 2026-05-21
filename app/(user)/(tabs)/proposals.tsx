@@ -4,7 +4,7 @@ import { useFocusEffect } from "@react-navigation/native";
 import { router } from "expo-router";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { useCollection } from "../../../src/store/useCollection";
-import { listMyProposalsApi, deleteMyProposalApi } from "../../../src/api/proposalsApi";
+import { listMyProposalsApi, deleteMyProposalApi, MyProposal } from "../../../src/api/proposalsApi";
 import { colors } from "../../../src/theme/colors";
 import { spacing } from "../../../src/theme/spacing";
 import { typography } from "../../../src/theme/typography";
@@ -19,7 +19,7 @@ function badge(status?: string) {
 }
 
 export default function ProposalsScreen() {
-  const [items, setItems] = useState<any[]>([]);
+  const [items, setItems] = useState<MyProposal[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForId, setShowForId] = useState<number | null>(null);
   const [password, setPassword] = useState("");
@@ -99,20 +99,24 @@ export default function ProposalsScreen() {
             const b = badge(item.status);
             return (
               <View style={styles.card}>
-                <View style={styles.row}>
-                  <Text style={styles.cardTitle}>{item.name}</Text>
-                  <View style={[styles.badge, { backgroundColor: b.bg }]}>
-                    <Text style={[styles.badgeText, { color: b.text }]}>{b.label}</Text>
+                <Pressable onPress={() => router.push({ pathname: "/(user)/proposal/[id]", params: { id: String(item.id) } } as any)}>
+                  <View style={styles.row}>
+                    <Text style={styles.cardTitle}>{item.name}</Text>
+                    <View style={[styles.badge, { backgroundColor: b.bg }]}>
+                      <Text style={[styles.badgeText, { color: b.text }]}>{b.label}</Text>
+                    </View>
                   </View>
-                </View>
 
-                <Text style={styles.cardSubtitle}>{item.Manufacturer?.name || "—"}</Text>
+                  <Text style={styles.cardSubtitle}>{item.Manufacturer?.name || "—"}</Text>
 
-                {item.description ? <Text style={styles.desc}>{item.description}</Text> : null}
+                  {item.description ? <Text style={styles.desc}>{item.description}</Text> : null}
 
-                {item.status === "REJETE" && item.rejectReason ? (
-                  <Text style={styles.reject}>Raison : {item.rejectReason}</Text>
-                ) : null}
+                  {item.status === "REJETE" && item.rejectReason ? (
+                    <Text style={styles.reject}>Raison : {item.rejectReason}</Text>
+                  ) : null}
+
+                  <Text style={styles.consultLink}>Consulter la proposition</Text>
+                </Pressable>
                 {item.status === "EN_ATTENTE" && (
   showForId === item.id ? (
     <View style={{ marginTop: spacing.sm, gap: spacing.sm }}>
@@ -174,6 +178,7 @@ const styles = StyleSheet.create({
   cardTitle: { fontSize: 16, fontWeight: "800", color: colors.text, flex: 1 },
   cardSubtitle: { marginTop: 6, color: colors.muted },
   desc: { marginTop: 8, color: colors.text },
+  consultLink: { marginTop: spacing.sm, color: colors.primaryDark, fontWeight: "900" },
 
   badge: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 999 },
   badgeText: { fontSize: 12, fontWeight: "800" },

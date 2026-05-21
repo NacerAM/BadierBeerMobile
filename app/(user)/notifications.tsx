@@ -28,6 +28,7 @@ function formatDateTime(value?: string) {
 
 function notificationColor(type: AppNotification["type"]) {
   if (type === "GLASS_VALIDATED") return colors.successText;
+  if (type === "GLASS_REJECTED") return colors.dangerText;
   if (type === "GLASS_RATED") return colors.primaryDark;
   return colors.warningText;
 }
@@ -78,7 +79,7 @@ export default function NotificationsScreen() {
       }
     } catch {}
 
-    if (item.type === "GLASS_VALIDATED" || item.type === "GLASS_RATED") {
+    if (item.type === "GLASS_VALIDATED" || item.type === "GLASS_REJECTED" || item.type === "GLASS_RATED") {
       if (item.payload?.glassId) {
         router.push({ pathname: "/(user)/glass/[id]", params: { id: String(item.payload.glassId) } } as any);
       }
@@ -164,9 +165,12 @@ export default function NotificationsScreen() {
             <Text style={styles.cardMessage}>{item.message}</Text>
             <Text style={styles.cardDate}>{formatDateTime(item.createdAt)}</Text>
             {item.type === "GLASS_RATED" && item.payload?.fromUserId ? (
-              <Pressable onPress={() => openProfileFromNotification(item)} hitSlop={10}>
-                <Text style={styles.profileLink}>Voir le profil de l'utilisateur</Text>
-              </Pressable>
+              <View style={styles.ratingMeta}>
+                <Text style={styles.ratingMetaText}>De la part de {item.payload?.fromUsername || "cet utilisateur"}</Text>
+                <Pressable onPress={() => openProfileFromNotification(item)} hitSlop={10}>
+                  <Text style={styles.profileLink}>Voir le profil de {item.payload?.fromUsername || "cet utilisateur"}</Text>
+                </Pressable>
+              </View>
             ) : null}
           </Pressable>
         ))
@@ -211,5 +215,7 @@ const styles = StyleSheet.create({
   dot: { width: 10, height: 10, borderRadius: 999, backgroundColor: colors.primaryDark },
   cardMessage: { color: colors.text, marginTop: spacing.sm, lineHeight: 20 },
   cardDate: { color: colors.muted, marginTop: spacing.sm, fontSize: 12 },
-  profileLink: { color: colors.primaryDark, fontWeight: "900", marginTop: spacing.sm },
+  ratingMeta: { marginTop: spacing.sm, gap: spacing.xs },
+  ratingMetaText: { color: colors.text, fontWeight: "700" },
+  profileLink: { color: colors.primaryDark, fontWeight: "900" },
 });

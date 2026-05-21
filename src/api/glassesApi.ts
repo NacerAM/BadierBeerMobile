@@ -21,6 +21,7 @@ export type Glass = {
   images?: GlassImage[];
   avgRating?: number | null;
   ratingsCount?: number;
+  myRating?: number | null;
   createdBy?: { id: number; username: string; avatarUrl?: string | null };
 };
 
