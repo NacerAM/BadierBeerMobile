@@ -8,8 +8,11 @@ import { spacing } from "../../src/theme/spacing";
 import { typography } from "../../src/theme/typography";
 import { Glass, listGlassesApi } from "../../src/api/glassesApi";
 
+type SortMode = "recent" | "oldest" | "popular";
+
 export default function CataloguePublicScreen() {
   const [q, setQ] = useState("");
+  const [sortMode, setSortMode] = useState<SortMode>("recent");
   const [items, setItems] = useState<Glass[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -32,9 +35,23 @@ export default function CataloguePublicScreen() {
 
   const filtered = useMemo(() => {
     const query = q.trim().toLowerCase();
-    if (!query) return items;
-    return items.filter((g) => (g.name.toLowerCase().includes(query) || (g.Manufacturer?.name || "").toLowerCase().includes(query)));
-  }, [q, items]);
+    const result = !query
+      ? [...items]
+      : items.filter((g) => (g.name.toLowerCase().includes(query) || (g.Manufacturer?.name || "").toLowerCase().includes(query)));
+
+    result.sort((a, b) => {
+      if (sortMode === "popular") {
+        const ratingsDiff = Number(b.ratingsCount || 0) - Number(a.ratingsCount || 0);
+        if (ratingsDiff !== 0) return ratingsDiff;
+      }
+      const aTime = new Date(a.createdAt || 0).getTime();
+      const bTime = new Date(b.createdAt || 0).getTime();
+      if (sortMode === "oldest") return aTime - bTime;
+      return bTime - aTime;
+    });
+
+    return result;
+  }, [q, items, sortMode]);
 
   function primaryImageUrl(g: Glass): string | null {
     const list = g.images || [];
@@ -68,6 +85,21 @@ export default function CataloguePublicScreen() {
           style={styles.search}
           autoCapitalize="none"
         />
+      </View>
+
+      <View style={styles.filterRow}>
+        <Text style={styles.filterLabel}>Trier par</Text>
+        <View style={styles.filterChips}>
+          <Pressable onPress={() => setSortMode("recent")} style={[styles.chip, sortMode === "recent" && styles.chipActive]}>
+            <Text style={[styles.chipText, sortMode === "recent" && styles.chipTextActive]}>Plus recents</Text>
+          </Pressable>
+          <Pressable onPress={() => setSortMode("oldest")} style={[styles.chip, sortMode === "oldest" && styles.chipActive]}>
+            <Text style={[styles.chipText, sortMode === "oldest" && styles.chipTextActive]}>Plus anciens</Text>
+          </Pressable>
+          <Pressable onPress={() => setSortMode("popular")} style={[styles.chip, sortMode === "popular" && styles.chipActive]}>
+            <Text style={[styles.chipText, sortMode === "popular" && styles.chipTextActive]}>Plus populaires</Text>
+          </Pressable>
+        </View>
       </View>
 
       {loading ? (
@@ -121,8 +153,15 @@ export default function CataloguePublicScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, paddingTop: spacing.lg, paddingHorizontal: spacing.lg, backgroundColor: colors.bg },
   title: { fontSize: typography.h1, fontWeight: '900', color: colors.text, marginBottom: spacing.md, textAlign: 'center' },
-  searchWrap: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.card, paddingHorizontal: spacing.md, paddingVertical: spacing.sm, borderRadius: 16, marginBottom: spacing.lg, shadowColor: colors.shadow as any, shadowOpacity: 0.15, shadowRadius: 10, shadowOffset: { width: 0, height: 6 }, elevation: 2 },
+  searchWrap: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.card, paddingHorizontal: spacing.md, paddingVertical: spacing.sm, borderRadius: 16, marginBottom: spacing.md, shadowColor: colors.shadow as any, shadowOpacity: 0.15, shadowRadius: 10, shadowOffset: { width: 0, height: 6 }, elevation: 2 },
   search: { flex: 1, color: colors.text, paddingVertical: 2 },
+  filterRow: { marginBottom: spacing.lg },
+  filterLabel: { color: colors.muted, fontWeight: '800', marginBottom: spacing.xs },
+  filterChips: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
+  chip: { paddingHorizontal: 12, paddingVertical: 8, borderRadius: 999, backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border },
+  chipActive: { backgroundColor: colors.primary, borderColor: colors.primaryDark },
+  chipText: { color: colors.text, fontWeight: '800', fontSize: 12 },
+  chipTextActive: { color: '#2E1A0F' },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 10 },
   centerText: { color: colors.muted },
   errorText: { color: colors.dangerText, fontWeight: '800', textAlign: 'center' },

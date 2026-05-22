@@ -35,8 +35,15 @@ function formatDateTime(value?: string | null) {
   });
 }
 
-function normalizeDateInput(value: string) {
-  return value.trim().replace(" ", "T");
+function toApiDateString(value: string) {
+  const cleaned = value.trim();
+  const match = cleaned.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+  if (!match) return null;
+  const [, dd, mm, yyyy] = match;
+  const iso = `${yyyy}-${mm}-${dd}T00:00:00.000Z`;
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return null;
+  return iso;
 }
 
 function isDeadlineReached(value?: string | null) {
@@ -82,9 +89,13 @@ export default function BrewerEventsScreen() {
     if (!title.trim()) return Alert.alert("Erreur", "Titre de l'evenement requis");
     if (!content.trim()) return Alert.alert("Erreur", "Description de l'evenement requise");
     if (!address.trim()) return Alert.alert("Erreur", "Adresse requise");
-    if (!startAt.trim()) return Alert.alert("Erreur", "Date de debut requise");
-    if (!endAt.trim()) return Alert.alert("Erreur", "Date de fin requise");
-    if (!registrationDeadline.trim()) return Alert.alert("Erreur", "Date limite de participation requise");
+
+    const startAtIso = toApiDateString(startAt);
+    const endAtIso = toApiDateString(endAt);
+    const deadlineIso = toApiDateString(registrationDeadline);
+    if (!startAtIso || !endAtIso || !deadlineIso) {
+      return Alert.alert("Erreur", "Introduisez les dates au format jj/mm/aaaa");
+    }
 
     try {
       setLoading(true);
@@ -93,9 +104,9 @@ export default function BrewerEventsScreen() {
         content: content.trim(),
         imageUrl: imageUrl.trim() || null,
         address: address.trim(),
-        startAt: normalizeDateInput(startAt),
-        endAt: normalizeDateInput(endAt),
-        registrationDeadline: normalizeDateInput(registrationDeadline),
+        startAt: startAtIso,
+        endAt: endAtIso,
+        registrationDeadline: deadlineIso,
       });
       setTitle("");
       setContent("");
@@ -153,9 +164,9 @@ export default function BrewerEventsScreen() {
         <Input label="Titre de l'evenement" value={title} onChangeText={setTitle} />
         <Input label="Description" value={content} onChangeText={setContent} multiline numberOfLines={5} style={{ minHeight: 110, textAlignVertical: "top" } as any} />
         <Input label="Adresse" value={address} onChangeText={setAddress} />
-        <Input label="Date de debut (YYYY-MM-DDTHH:mm)" value={startAt} onChangeText={setStartAt} autoCapitalize="none" />
-        <Input label="Date de fin (YYYY-MM-DDTHH:mm)" value={endAt} onChangeText={setEndAt} autoCapitalize="none" />
-        <Input label="Date limite de participation (YYYY-MM-DDTHH:mm)" value={registrationDeadline} onChangeText={setRegistrationDeadline} autoCapitalize="none" />
+        <Input label="Date de debut (jj/mm/aaaa)" value={startAt} onChangeText={setStartAt} />
+        <Input label="Date de fin (jj/mm/aaaa)" value={endAt} onChangeText={setEndAt} />
+        <Input label="Date limite de participation (jj/mm/aaaa)" value={registrationDeadline} onChangeText={setRegistrationDeadline} />
         <Input label="URL image (optionnel)" value={imageUrl} onChangeText={setImageUrl} autoCapitalize="none" />
         <Button label={loading ? "Envoi..." : "Valider le formulaire"} onPress={onSubmit} disabled={loading} />
       </View>

@@ -28,8 +28,8 @@ function formatDateTime(value?: string) {
 
 function notificationColor(type: AppNotification["type"]) {
   if (type === "GLASS_VALIDATED") return colors.successText;
-  if (type === "GLASS_REJECTED") return colors.dangerText;
-  if (type === "GLASS_RATED") return colors.primaryDark;
+  if (type === "GLASS_REJECTED" || type === "EVENT_CANCELLED") return colors.dangerText;
+  if (type === "GLASS_RATED" || type === "GLASS_UPDATED" || type === "EVENT_UPDATED") return colors.primaryDark;
   return colors.warningText;
 }
 
@@ -79,14 +79,14 @@ export default function NotificationsScreen() {
       }
     } catch {}
 
-    if (item.type === "GLASS_VALIDATED" || item.type === "GLASS_REJECTED" || item.type === "GLASS_RATED") {
+    if (item.type === "GLASS_VALIDATED" || item.type === "GLASS_REJECTED" || item.type === "GLASS_RATED" || item.type === "GLASS_UPDATED") {
       if (item.payload?.glassId) {
         router.push({ pathname: "/(user)/glass/[id]", params: { id: String(item.payload.glassId) } } as any);
       }
       return;
     }
 
-    if (item.type === "EVENT_UPCOMING" && item.payload?.eventId) {
+    if ((item.type === "EVENT_UPCOMING" || item.type === "EVENT_UPDATED" || item.type === "EVENT_CANCELLED") && item.payload?.eventId) {
       router.push({ pathname: "/(user)/event/[id]", params: { id: String(item.payload.eventId) } } as any);
     }
   }

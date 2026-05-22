@@ -1,6 +1,13 @@
 ﻿import { apiRequest } from "./client";
 
-export type AppNotificationType = "GLASS_VALIDATED" | "GLASS_REJECTED" | "GLASS_RATED" | "EVENT_UPCOMING";
+export type AppNotificationType =
+  | "GLASS_VALIDATED"
+  | "GLASS_REJECTED"
+  | "GLASS_RATED"
+  | "GLASS_UPDATED"
+  | "EVENT_UPCOMING"
+  | "EVENT_UPDATED"
+  | "EVENT_CANCELLED";
 
 export type AppNotification = {
   id: number;
@@ -16,6 +23,7 @@ export type AppNotification = {
     eventId?: number;
     breweryName?: string | null;
     startAt?: string | null;
+    cancellationReason?: string | null;
   } | null;
   readAt?: string | null;
   createdAt?: string;

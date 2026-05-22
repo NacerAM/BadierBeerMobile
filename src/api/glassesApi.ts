@@ -22,6 +22,7 @@ export type Glass = {
   avgRating?: number | null;
   ratingsCount?: number;
   myRating?: number | null;
+  createdAt?: string;
   createdBy?: { id: number; username: string; avatarUrl?: string | null };
 };
 
@@ -45,4 +46,3 @@ export async function getGlassApi(id: number) {
 export async function rateGlassApi(id: number, rating: number) {
   return apiRequest<{ myRating: number; avgRating: number | null; ratingsCount: number }>(`/api/glasses/${id}/rating`, "PUT", { rating });
 }
-

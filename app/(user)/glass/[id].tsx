@@ -202,7 +202,7 @@ export default function GlassDetailUserScreen() {
           </View>
         ) : null}
 
-        {!isAdmin ? (
+        {!isAdmin && isOwner ? (
           <View style={{ marginTop: spacing.lg }}>
             <Button label={contactingAdmin ? "Ouverture..." : "Contacter l'admin au sujet de ce verre"} variant="secondary" onPress={onContactAdmin} disabled={contactingAdmin} />
           </View>
@@ -341,5 +341,6 @@ const styles = StyleSheet.create({
   viewerClose: { position: "absolute", top: spacing.xl, right: spacing.xl, width: 36, height: 36, borderRadius: 18, backgroundColor: "rgba(255,255,255,0.9)", alignItems: "center", justifyContent: "center" },
   viewerCloseText: { color: "#000", fontSize: 22, fontWeight: "900", marginTop: -2 },
 });
+
 
 
