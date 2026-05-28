@@ -1,4 +1,4 @@
-﻿import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { router, useFocusEffect } from "expo-router";
 import Ionicons from "@expo/vector-icons/Ionicons";
@@ -15,25 +15,6 @@ function formatDuration(seconds?: number | null) {
   if (hours <= 0) return `${minutes} min`;
   if (minutes <= 0) return `${hours} h`;
   return `${hours} h ${minutes} min`;
-}
-
-function formatDate(value?: string | null) {
-  if (!value) return "A confirmer";
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return value;
-  return date.toLocaleString("fr-BE", {
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-}
-
-function roleLabel(role: string) {
-  if (role === "BREWER") return "Brasseur";
-  if (role === "ADMIN") return "Admin";
-  return "Utilisateur";
 }
 
 export default function AdminStatsScreen() {
@@ -53,7 +34,10 @@ export default function AdminStatsScreen() {
   useEffect(() => {
     load();
   }, [load]);
-  useFocusEffect(useCallback(() => { load(); }, [load]));
+
+  useFocusEffect(useCallback(() => {
+    load();
+  }, [load]));
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
@@ -77,55 +61,39 @@ export default function AdminStatsScreen() {
       </View>
 
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Profils les plus actifs</Text>
-        <Text style={styles.sectionSub}>Classement selon les publications, messages, notes, collections et participations.</Text>
+        <Text style={styles.sectionTitle}>Classements</Text>
+        <Text style={styles.sectionSub}>Appuyez sur un bouton pour ouvrir le detail correspondant.</Text>
         {loading ? <Text style={styles.loading}>Chargement...</Text> : null}
-        {stats?.activeProfiles?.map((item, index) => (
-          <Pressable key={item.id} style={styles.rowCard} onPress={() => router.push({ pathname: "/(user)/profile/[id]", params: { id: String(item.id), fromAdmin: "1" } } as any)}>
-            <View style={styles.rankBubble}><Text style={styles.rankText}>{index + 1}</Text></View>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.rowTitle}>{item.username}</Text>
-              <Text style={styles.rowMeta}>{roleLabel(item.role)} · Score {item.activityScore}</Text>
-              <Text style={styles.rowSub}>Publis {item.proposalsCount} · Messages {item.messagesCount} · Notes {item.ratingsCount}</Text>
-            </View>
-            <Text style={styles.linkArrow}>›</Text>
-          </Pressable>
-        ))}
-        {!loading && !stats?.activeProfiles?.length ? <Text style={styles.empty}>Aucun profil actif a afficher.</Text> : null}
-      </View>
 
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Publications les mieux notees</Text>
-        <Text style={styles.sectionSub}>Moyenne la plus haute puis nombre de notes recues.</Text>
-        {stats?.topRatedPublications?.map((item, index) => (
-          <Pressable key={item.id} style={styles.rowCard} onPress={() => router.push({ pathname: "/(user)/glass/[id]", params: { id: String(item.id) } } as any)}>
-            <View style={styles.rankBubble}><Text style={styles.rankText}>{index + 1}</Text></View>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.rowTitle}>{item.name}</Text>
-              <Text style={styles.rowMeta}>{item.manufacturerName || "Brasserie inconnue"} · par {item.creatorUsername}</Text>
-              <Text style={styles.rowSub}>{item.avgRating}/5 · {item.ratingsCount} note{item.ratingsCount > 1 ? "s" : ""}</Text>
-            </View>
-            <Text style={styles.linkArrow}>›</Text>
-          </Pressable>
-        ))}
-        {!loading && !stats?.topRatedPublications?.length ? <Text style={styles.empty}>Aucune publication notee pour le moment.</Text> : null}
-      </View>
+        <Pressable style={styles.statButton} onPress={() => router.push({ pathname: "/(user)/admin-stats/[section]", params: { section: "profiles" } } as any)}>
+          <View style={styles.statButtonTextWrap}>
+            <Text style={styles.statButtonTitle}>Profils les plus actifs</Text>
+            <Text style={styles.statButtonSub}>
+              {stats?.activeProfiles?.length || 0} profil{(stats?.activeProfiles?.length || 0) > 1 ? "s" : ""} classes
+            </Text>
+          </View>
+          <Text style={styles.linkArrow}>{">"}</Text>
+        </Pressable>
 
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Evenements les plus frequentes</Text>
-        <Text style={styles.sectionSub}>Classement selon le nombre de participants valides.</Text>
-        {stats?.topEvents?.map((item, index) => (
-          <Pressable key={item.id} style={styles.rowCard} onPress={() => router.push({ pathname: "/(user)/event/[id]", params: { id: String(item.id) } } as any)}>
-            <View style={styles.rankBubble}><Text style={styles.rankText}>{index + 1}</Text></View>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.rowTitle}>{item.title}</Text>
-              <Text style={styles.rowMeta}>{item.breweryName || "Badier Beer"}</Text>
-              <Text style={styles.rowSub}>{item.participantsCount} participant{item.participantsCount > 1 ? "s" : ""} · {formatDate(item.startAt)}</Text>
-            </View>
-            <Text style={styles.linkArrow}>›</Text>
-          </Pressable>
-        ))}
-        {!loading && !stats?.topEvents?.length ? <Text style={styles.empty}>Aucun evenement frequentable pour le moment.</Text> : null}
+        <Pressable style={styles.statButton} onPress={() => router.push({ pathname: "/(user)/admin-stats/[section]", params: { section: "publications" } } as any)}>
+          <View style={styles.statButtonTextWrap}>
+            <Text style={styles.statButtonTitle}>Publications les mieux notees</Text>
+            <Text style={styles.statButtonSub}>
+              {stats?.topRatedPublications?.length || 0} publication{(stats?.topRatedPublications?.length || 0) > 1 ? "s" : ""} classee{(stats?.topRatedPublications?.length || 0) > 1 ? "s" : ""}
+            </Text>
+          </View>
+          <Text style={styles.linkArrow}>{">"}</Text>
+        </Pressable>
+
+        <Pressable style={styles.statButton} onPress={() => router.push({ pathname: "/(user)/admin-stats/[section]", params: { section: "events" } } as any)}>
+          <View style={styles.statButtonTextWrap}>
+            <Text style={styles.statButtonTitle}>Evenements les plus frequentes</Text>
+            <Text style={styles.statButtonSub}>
+              {stats?.topEvents?.length || 0} evenement{(stats?.topEvents?.length || 0) > 1 ? "s" : ""} classe{(stats?.topEvents?.length || 0) > 1 ? "s" : ""}
+            </Text>
+          </View>
+          <Text style={styles.linkArrow}>{">"}</Text>
+        </Pressable>
       </View>
     </ScrollView>
   );
@@ -153,13 +121,21 @@ const styles = StyleSheet.create({
   section: { marginBottom: spacing.lg },
   sectionTitle: { color: colors.text, fontWeight: "900", fontSize: 19 },
   sectionSub: { color: colors.muted, marginTop: spacing.xs, lineHeight: 19, marginBottom: spacing.md },
-  rowCard: { flexDirection: "row", alignItems: "center", gap: spacing.md, backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border, borderRadius: 18, padding: spacing.md, marginBottom: spacing.sm },
-  rankBubble: { width: 34, height: 34, borderRadius: 17, backgroundColor: colors.primary, alignItems: "center", justifyContent: "center" },
-  rankText: { color: "#2E1A0F", fontWeight: "900" },
-  rowTitle: { color: colors.text, fontWeight: "900", fontSize: 16 },
-  rowMeta: { color: colors.muted, marginTop: 2, fontWeight: "700" },
-  rowSub: { color: colors.text, marginTop: 4 },
+  statButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: spacing.md,
+    backgroundColor: colors.card,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 18,
+    padding: spacing.md,
+    marginBottom: spacing.sm,
+  },
+  statButtonTextWrap: { flex: 1 },
+  statButtonTitle: { color: colors.text, fontWeight: "900", fontSize: 16 },
+  statButtonSub: { color: colors.muted, marginTop: 4, fontWeight: "700" },
   linkArrow: { color: colors.muted, fontSize: 26, fontWeight: "900" },
-  empty: { color: colors.muted, textAlign: "center", marginTop: spacing.sm },
-  loading: { color: colors.muted, textAlign: "center", marginTop: spacing.sm },
+  loading: { color: colors.muted, textAlign: "center", marginTop: spacing.sm, marginBottom: spacing.sm },
 });

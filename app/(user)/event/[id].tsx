@@ -7,7 +7,7 @@ import { colors } from "../../../src/theme/colors";
 import { spacing } from "../../../src/theme/spacing";
 import { typography } from "../../../src/theme/typography";
 import { getPublicEventApi, participateInEventApi, PublicBreweryEvent } from "../../../src/api/publicContentApi";
-import { openMessageConversationApi } from "../../../src/api/messagesApi";
+import { useAuth } from "../../../src/store/useAuth";
 
 function formatDateTime(value?: string | null) {
   if (!value) return "A confirmer";
@@ -24,12 +24,13 @@ function formatDateTime(value?: string | null) {
 
 export default function EventDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
+  const { user } = useAuth();
   const eventId = Number(id);
+  const isAdmin = user?.role === "ADMIN";
   const [event, setEvent] = useState<PublicBreweryEvent | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
-  const [contactingBrewer, setContactingBrewer] = useState(false);
   const [contactingAdmin, setContactingAdmin] = useState(false);
 
   const load = useCallback(async () => {
@@ -54,24 +55,11 @@ export default function EventDetailScreen() {
       setSubmitting(true);
       await participateInEventApi(event.id);
       await load();
-      Alert.alert("Participation envoyee", "Votre demande a ete transmise pour validation admin.");
+      Alert.alert("Participation envoyee", "Votre demande a ete transmise au brasseur pour validation.");
     } catch (e: any) {
       Alert.alert("Erreur", e?.message || "Impossible de participer a cet evenement");
     } finally {
       setSubmitting(false);
-    }
-  }
-
-  async function onContactBrewer() {
-    if (!event) return;
-    try {
-      setContactingBrewer(true);
-      const conversation = await openMessageConversationApi({ targetType: "EVENT", targetId: event.id });
-      router.push({ pathname: "/(user)/chat/[id]", params: { id: String(conversation.id) } } as any);
-    } catch (e: any) {
-      Alert.alert("Erreur", e?.message || "Impossible de contacter ce brasseur");
-    } finally {
-      setContactingBrewer(false);
     }
   }
 
@@ -89,6 +77,8 @@ export default function EventDetailScreen() {
 
   if (loading) return <View style={styles.center}><ActivityIndicator /><Text style={styles.muted}>Chargement...</Text></View>;
   if (error || !event) return <View style={styles.center}><Text style={styles.error}>{error || "Evenement introuvable"}</Text></View>;
+
+  const isOwnBrewerEvent = event.Manufacturer?.ownerUserId != null && user?.id === event.Manufacturer.ownerUserId;
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
@@ -117,12 +107,18 @@ export default function EventDetailScreen() {
 
         {event.myParticipationStatus === "VALIDE" ? <Text style={styles.statusInfo}>Votre participation est validee.</Text> : null}
         {event.myParticipationStatus === "EN_ATTENTE" ? <Text style={styles.statusInfo}>Votre participation est en attente de validation.</Text> : null}
+        {event.myParticipationStatus === "REJETE" ? (
+          <Text style={styles.statusInfo}>
+            Votre participation a ete rejetee{event.myParticipationRejectReason ? ` · Motif: ${event.myParticipationRejectReason}` : "."}
+          </Text>
+        ) : null}
         {!event.myParticipationStatus && event.registrationClosed ? <Text style={styles.statusInfo}>Les inscriptions sont cloturees.</Text> : null}
 
         <View style={styles.actionStack}>
-          <Button label={contactingBrewer ? "Ouverture..." : "Contacter le brasseur"} variant="secondary" onPress={onContactBrewer} disabled={contactingBrewer} />
-          <Button label={contactingAdmin ? "Ouverture..." : "Contacter l'admin"} variant="secondary" onPress={onContactAdmin} disabled={contactingAdmin} />
-          {!event.myParticipationStatus && !event.registrationClosed ? (
+          {!isAdmin ? (
+            <Button label={contactingAdmin ? "Ouverture..." : "Contacter l'admin"} variant="secondary" onPress={onContactAdmin} disabled={contactingAdmin} />
+          ) : null}
+          {!isOwnBrewerEvent && !event.myParticipationStatus && !event.registrationClosed ? (
             <Button label={submitting ? "Envoi..." : "Participer a l'evenement"} onPress={onParticipate} disabled={submitting} />
           ) : null}
         </View>

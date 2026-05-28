@@ -67,26 +67,8 @@ export default function UserTabsLayout() {
           tabBarBadgeStyle: { backgroundColor: colors.dangerText, color: "#fff", fontWeight: "900" },
         }}
       />
-      <Tabs.Screen
-        name="explore"
-        options={{
-          title: "Explorer",
-          tabBarIcon: ({ color, size, focused }) => (
-            <Ionicons name={focused ? "compass" : "compass-outline"} color={color} size={size ?? 22} />
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="notifications"
-        options={{
-          title: "Notifications",
-          tabBarIcon: ({ color, size, focused }) => (
-            <Ionicons name={focused ? "notifications" : "notifications-outline"} color={color} size={size ?? 22} />
-          ),
-          tabBarBadge: unreadNotifications > 0 ? unreadNotifications : undefined,
-          tabBarBadgeStyle: { backgroundColor: colors.dangerText, color: "#fff", fontWeight: "900" },
-        }}
-      />
+      <Tabs.Screen name="explore" options={{ href: null }} />
+      <Tabs.Screen name="notifications" options={{ href: null }} />
 
       <Tabs.Screen name="collection" options={{ href: null }} />
       <Tabs.Screen name="propose" options={{ href: null }} />

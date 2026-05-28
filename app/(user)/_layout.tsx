@@ -18,8 +18,19 @@ export default function UserStackLayout() {
         <Stack.Screen name="profile/[id]" />
         <Stack.Screen name="notifications" />
         <Stack.Screen name="event/[id]" />
+        <Stack.Screen name="product/[id]" />
         <Stack.Screen name="proposal/[id]" />
         <Stack.Screen name="admin-stats" />
+        <Stack.Screen name="admin-stats/[section]" />
+        <Stack.Screen name="admin-glass/[id]" />
+        <Stack.Screen name="admin-glass-edit/[id]" />
+        <Stack.Screen name="admin-product/[id]" />
+        <Stack.Screen name="admin-product-edit/[id]" />
+        <Stack.Screen name="admin-event-create" />
+        <Stack.Screen name="admin-event-edit/[id]" />
+        <Stack.Screen name="brewer-event-create" />
+        <Stack.Screen name="brewer-product-create" />
+        <Stack.Screen name="brewer-product/[id]" />
       </Stack>
       {!isProfile && (
         <Pressable

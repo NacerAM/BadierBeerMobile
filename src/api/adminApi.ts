@@ -43,7 +43,12 @@ export type AdminProduct = {
   status: "EN_ATTENTE" | "VALIDE" | "REJETE";
   rejectReason?: string | null;
   createdAt?: string;
-  Manufacturer?: { id: number; name: string };
+  Manufacturer?: {
+    id: number;
+    name: string;
+    ownerUserId?: number | null;
+    owner?: { id: number; username: string; email?: string; role?: string } | null;
+  };
 };
 
 export type AdminPendingEvent = {
@@ -128,7 +133,7 @@ export async function reviewAdminGlassApi(id: number, payload: { action: "valida
   return apiRequest<AdminPendingGlass>(`/api/admin/glasses/${id}/review`, "PATCH", payload);
 }
 
-export async function updateAdminGlassApi(id: number, payload: { name: string; description?: string | null }) {
+export async function updateAdminGlassApi(id: number, payload: { name: string; description?: string | null; imageUrls?: string[] }) {
   return apiRequest<AdminPendingGlass>(`/api/admin/glasses/${id}`, "PATCH", payload);
 }
 

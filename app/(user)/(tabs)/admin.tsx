@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
-import { Alert, Image, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { Alert, Image, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
+import Ionicons from "@expo/vector-icons/Ionicons";
 import { router, useFocusEffect } from "expo-router";
 import Button from "../../../src/components/Button";
 import Input from "../../../src/components/Input";
@@ -12,7 +13,6 @@ import {
   AdminPendingGlass,
   AdminProduct,
   cancelAdminPostApi,
-  createAdminPostApi,
   deleteAdminGlassApi,
   deleteAdminPostApi,
   deleteAdminProductApi,
@@ -24,40 +24,9 @@ import {
   reviewAdminGlassApi,
   reviewAdminPostApi,
   reviewAdminProductApi,
-  updateAdminGlassApi,
-  updateAdminPostApi,
-  updateAdminProductApi,
 } from "../../../src/api/adminApi";
 
 type AdminTab = "accounts" | "glasses" | "products" | "events";
-
-type AdminEventForm = {
-  title: string;
-  content: string;
-  address: string;
-  startAt: string;
-  endAt: string;
-  registrationDeadline: string;
-  imageUrl: string;
-};
-
-type ProductForm = {
-  name: string;
-  description: string;
-  price: string;
-  imageUrl: string;
-  isAvailable: boolean;
-};
-
-const initialEventForm: AdminEventForm = {
-  title: "",
-  content: "",
-  address: "",
-  startAt: "",
-  endAt: "",
-  registrationDeadline: "",
-  imageUrl: "",
-};
 
 function formatDateTime(value?: string | null) {
   if (!value) return "A confirmer";
@@ -72,26 +41,6 @@ function formatDateTime(value?: string | null) {
   });
 }
 
-function formatDateForInput(value?: string | null) {
-  if (!value) return "";
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return "";
-  const dd = String(date.getDate()).padStart(2, "0");
-  const mm = String(date.getMonth() + 1).padStart(2, "0");
-  const yyyy = date.getFullYear();
-  return `${dd}/${mm}/${yyyy}`;
-}
-
-function toApiDateString(value: string) {
-  const cleaned = value.trim();
-  const match = cleaned.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
-  if (!match) return null;
-  const [, dd, mm, yyyy] = match;
-  const iso = `${yyyy}-${mm}-${dd}T00:00:00.000Z`;
-  const date = new Date(iso);
-  if (Number.isNaN(date.getTime())) return null;
-  return iso;
-}
 
 function accountStatusLabel(status: AdminAccount["status"]) {
   if (status === "ACTIVE") return "Actif";
@@ -107,6 +56,20 @@ function contentStatusLabel(status: "EN_ATTENTE" | "VALIDE" | "REJETE", isCancel
   return "En attente";
 }
 
+function normalizeSearchValue(value?: string | null) {
+  return (value || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .trim();
+}
+
+function matchesSearch(query: string, values: Array<string | number | null | undefined>) {
+  const normalizedQuery = normalizeSearchValue(query);
+  if (!normalizedQuery) return true;
+  return values.some((value) => normalizeSearchValue(String(value || "")).includes(normalizedQuery));
+}
+
 export default function AdminScreen() {
   const [tab, setTab] = useState<AdminTab>("accounts");
   const [accounts, setAccounts] = useState<AdminAccount[]>([]);
@@ -115,16 +78,23 @@ export default function AdminScreen() {
   const [events, setEvents] = useState<AdminPendingEvent[]>([]);
   const [loading, setLoading] = useState(true);
   const [busyKey, setBusyKey] = useState<string | null>(null);
-  const [editingEventId, setEditingEventId] = useState<number | null>(null);
   const [accountReasons, setAccountReasons] = useState<Record<number, string>>({});
   const [glassReasons, setGlassReasons] = useState<Record<number, string>>({});
   const [productReasons, setProductReasons] = useState<Record<number, string>>({});
   const [eventReasons, setEventReasons] = useState<Record<number, string>>({});
   const [cancelReasons, setCancelReasons] = useState<Record<number, string>>({});
-  const [eventForm, setEventForm] = useState<AdminEventForm>(initialEventForm);
-  const [glassForms, setGlassForms] = useState<Record<number, { name: string; description: string }>>({});
-  const [productForms, setProductForms] = useState<Record<number, ProductForm>>({});
-  const [eventForms, setEventForms] = useState<Record<number, AdminEventForm>>({});
+  const [searchByTab, setSearchByTab] = useState<Record<AdminTab, string>>({
+    accounts: "",
+    glasses: "",
+    products: "",
+    events: "",
+  });
+  const [pendingOnlyByTab, setPendingOnlyByTab] = useState<Record<AdminTab, boolean>>({
+    accounts: false,
+    glasses: false,
+    products: false,
+    events: false,
+  });
 
   const load = useCallback(async () => {
     try {
@@ -142,17 +112,6 @@ export default function AdminScreen() {
       setGlasses(nextGlasses);
       setProducts(nextProducts);
       setEvents(nextEvents);
-      setGlassForms(Object.fromEntries(nextGlasses.map((item) => [item.id, { name: item.name || "", description: item.description || "" }])));
-      setProductForms(Object.fromEntries(nextProducts.map((item) => [item.id, { name: item.name || "", description: item.description || "", price: item.price != null ? String(item.price) : "", imageUrl: item.imageUrl || "", isAvailable: item.isAvailable !== false }])));
-      setEventForms(Object.fromEntries(nextEvents.map((item) => [item.id, {
-        title: item.title || "",
-        content: item.content || "",
-        address: item.address || "",
-        startAt: formatDateForInput(item.startAt),
-        endAt: formatDateForInput(item.endAt),
-        registrationDeadline: formatDateForInput(item.registrationDeadline),
-        imageUrl: item.imageUrl || "",
-      }])));
       setCancelReasons(Object.fromEntries(nextEvents.map((item) => [item.id, item.cancellationReason || ""])));
     } catch (e: any) {
       Alert.alert("Erreur", e?.message || "Impossible de charger l'espace administrateur");
@@ -172,71 +131,85 @@ export default function AdminScreen() {
   const managedProducts = useMemo(() => products.filter((item) => item.status === "VALIDE"), [products]);
   const pendingEvents = useMemo(() => events.filter((item) => item.status === "EN_ATTENTE"), [events]);
   const managedEvents = useMemo(() => events.filter((item) => item.status === "VALIDE"), [events]);
+  const pendingAccounts = useMemo(() => accounts.filter((item) => item.status === "PENDING_APPROVAL"), [accounts]);
+  const managedAccounts = useMemo(() => accounts.filter((item) => item.status !== "PENDING_APPROVAL"), [accounts]);
+  const searchQuery = searchByTab[tab];
+  const pendingOnly = pendingOnlyByTab[tab];
 
-  function updateEventForm(key: keyof AdminEventForm, value: string) {
-    setEventForm((current) => ({ ...current, [key]: value }));
+  const filteredPendingAccounts = useMemo(
+    () => pendingAccounts.filter((item) => matchesSearch(searchByTab.accounts, [item.username, item.email, item.role, item.brewery?.name, item.brewery?.vatNumber, item.statusReason])),
+    [pendingAccounts, searchByTab.accounts]
+  );
+  const filteredManagedAccounts = useMemo(
+    () => managedAccounts.filter((item) => matchesSearch(searchByTab.accounts, [item.username, item.email, item.role, item.brewery?.name, item.brewery?.vatNumber, item.statusReason])),
+    [managedAccounts, searchByTab.accounts]
+  );
+  const filteredPendingGlasses = useMemo(
+    () => pendingGlasses.filter((item) => matchesSearch(searchByTab.glasses, [item.name, item.description, item.Manufacturer?.name, item.createdBy?.username])),
+    [pendingGlasses, searchByTab.glasses]
+  );
+  const filteredManagedGlasses = useMemo(
+    () => managedGlasses.filter((item) => matchesSearch(searchByTab.glasses, [item.name, item.description, item.Manufacturer?.name])),
+    [managedGlasses, searchByTab.glasses]
+  );
+  const filteredPendingProducts = useMemo(
+    () => pendingProducts.filter((item) => matchesSearch(searchByTab.products, [item.name, item.description, item.Manufacturer?.name, item.price, item.currency])),
+    [pendingProducts, searchByTab.products]
+  );
+  const filteredManagedProducts = useMemo(
+    () => managedProducts.filter((item) => matchesSearch(searchByTab.products, [item.name, item.description, item.Manufacturer?.name, item.price, item.currency])),
+    [managedProducts, searchByTab.products]
+  );
+  const filteredPendingEvents = useMemo(
+    () => pendingEvents.filter((item) => matchesSearch(searchByTab.events, [item.title, item.content, item.address, item.Manufacturer?.name])),
+    [pendingEvents, searchByTab.events]
+  );
+  const filteredManagedEvents = useMemo(
+    () => managedEvents.filter((item) => matchesSearch(searchByTab.events, [item.title, item.content, item.address, item.Manufacturer?.name, item.cancellationReason])),
+    [managedEvents, searchByTab.events]
+  );
+
+  function renderTabButton(key: AdminTab, label: string, pendingCount: number) {
+    const isActive = tab === key;
+    return (
+      <Pressable onPress={() => setTab(key)} style={[styles.segment, isActive ? styles.segmentActive : null]}>
+        <View style={styles.segmentInner}>
+          <Text style={[styles.segmentText, isActive ? styles.segmentTextActive : null]}>{label}</Text>
+          {pendingCount > 0 ? (
+            <View style={styles.pendingBadge}>
+              <Text style={styles.pendingBadgeText}>{pendingCount}</Text>
+            </View>
+          ) : null}
+        </View>
+      </Pressable>
+    );
   }
 
-  function updateManagedGlass(id: number, key: "name" | "description", value: string) {
-    setGlassForms((current) => ({ ...current, [id]: { ...(current[id] || { name: "", description: "" }), [key]: value } }));
+  function renderAccountCard(item: AdminAccount) {
+    return (
+      <Pressable key={item.id} style={styles.card} onPress={() => router.push({ pathname: "/(user)/profile/[id]", params: { id: String(item.id), fromAdmin: "1" } } as any)}>
+        <View style={styles.rowBetween}>
+          <Text style={styles.cardTitle}>{item.username}</Text>
+          <Text style={styles.badge}>{accountStatusLabel(item.status)}</Text>
+        </View>
+        <Text style={styles.meta}>{item.email} · {item.role === "BREWER" ? "Brasseur" : "Utilisateur"}</Text>
+        <Text style={styles.meta}>Creation: {formatDateTime(item.createdAt)}</Text>
+        {item.brewery ? <Text style={styles.meta}>Brasserie: {item.brewery.name}{item.brewery.vatNumber ? ` · TVA ${item.brewery.vatNumber}` : ""}</Text> : null}
+        {item.statusReason ? <Text style={styles.reject}>Motif: {item.statusReason}</Text> : null}
+        <Text style={styles.openHint}>Touchez pour consulter ce compte et le contacter</Text>
+        <Input label="Motif de suspension" value={accountReasons[item.id] || ""} onChangeText={(value) => setAccountReasons((current) => ({ ...current, [item.id]: value }))} />
+        <View style={styles.actionsRow}>
+          <Button label={busyKey === `account-${item.id}-validate` ? "..." : "Valider"} onPress={() => onReviewAccount(item, "validate")} disabled={busyKey != null} />
+          <Button label={busyKey === `account-${item.id}-suspend` ? "..." : "Suspendre"} variant="secondary" onPress={() => onReviewAccount(item, "suspend")} disabled={busyKey != null} />
+        </View>
+      </Pressable>
+    );
   }
 
-  function updateManagedProduct(id: number, key: keyof ProductForm, value: string | boolean) {
-    setProductForms((current) => ({
-      ...current,
-      [id]: {
-        ...(current[id] || { name: "", description: "", price: "", imageUrl: "", isAvailable: true }),
-        [key]: value,
-      },
-    }));
-  }
-
-  function updateManagedEvent(id: number, key: keyof AdminEventForm, value: string) {
-    setEventForms((current) => ({
-      ...current,
-      [id]: {
-        ...(current[id] || initialEventForm),
-        [key]: value,
-      },
-    }));
-  }
-
-  function buildEventPayload(form: AdminEventForm) {
-    const startAt = toApiDateString(form.startAt);
-    const endAt = toApiDateString(form.endAt);
-    const registrationDeadline = toApiDateString(form.registrationDeadline);
-    if (!startAt || !endAt || !registrationDeadline) {
-      return { error: "Introduisez les dates au format jj/mm/aaaa" };
-    }
-    return {
-      title: form.title.trim(),
-      content: form.content.trim(),
-      address: form.address.trim(),
-      startAt,
-      endAt,
-      registrationDeadline,
-      imageUrl: form.imageUrl.trim() || undefined,
-    };
-  }
-
-  async function onCreateAdminEvent() {
-    const payload = buildEventPayload(eventForm);
-    if ("error" in payload) return Alert.alert("Erreur", payload.error);
-    if (!payload.title || !payload.content || !payload.address) {
-      return Alert.alert("Erreur", "Tous les champs obligatoires de l'evenement admin doivent etre renseignes");
-    }
-
-    try {
-      setBusyKey("create-admin-event");
-      await createAdminPostApi(payload);
-      setEventForm(initialEventForm);
-      Alert.alert("Publie", "L'evenement admin est maintenant visible pour tout le monde");
-      await load();
-    } catch (e: any) {
-      Alert.alert("Erreur", e?.message || "Impossible de publier cet evenement");
-    } finally {
-      setBusyKey(null);
-    }
+  function primaryImageUrl(item: AdminPendingGlass) {
+    const list = item.images || [];
+    const primary = list.find((img) => img.isPrimary) || list[0];
+    return primary?.url || null;
   }
 
   async function onReviewAccount(item: AdminAccount, action: "validate" | "suspend") {
@@ -262,21 +235,6 @@ export default function AdminScreen() {
       await load();
     } catch (e: any) {
       Alert.alert("Erreur", e?.message || "Impossible de traiter ce verre");
-    } finally {
-      setBusyKey(null);
-    }
-  }
-
-  async function onSaveGlass(item: AdminPendingGlass) {
-    const form = glassForms[item.id];
-    if (!form?.name?.trim()) return Alert.alert("Erreur", "Le nom du verre est requis");
-    try {
-      setBusyKey(`glass-${item.id}-save`);
-      await updateAdminGlassApi(item.id, { name: form.name.trim(), description: form.description.trim() || null });
-      Alert.alert("Enregistre", "Le verre a ete modifie");
-      await load();
-    } catch (e: any) {
-      Alert.alert("Erreur", e?.message || "Impossible de modifier ce verre");
     } finally {
       setBusyKey(null);
     }
@@ -309,27 +267,6 @@ export default function AdminScreen() {
     }
   }
 
-  async function onSaveProduct(item: AdminProduct) {
-    const form = productForms[item.id];
-    if (!form?.name?.trim()) return Alert.alert("Erreur", "Le nom du produit est requis");
-    try {
-      setBusyKey(`product-${item.id}-save`);
-      await updateAdminProductApi(item.id, {
-        name: form.name.trim(),
-        description: form.description.trim() || null,
-        price: form.price.trim() ? Number(form.price.trim()) : null,
-        imageUrl: form.imageUrl.trim() || null,
-        isAvailable: form.isAvailable,
-      });
-      Alert.alert("Enregistre", "Le produit a ete modifie");
-      await load();
-    } catch (e: any) {
-      Alert.alert("Erreur", e?.message || "Impossible de modifier ce produit");
-    } finally {
-      setBusyKey(null);
-    }
-  }
-
   async function onDeleteProduct(item: AdminProduct) {
     try {
       setBusyKey(`product-${item.id}-delete`);
@@ -352,42 +289,6 @@ export default function AdminScreen() {
       await load();
     } catch (e: any) {
       Alert.alert("Erreur", e?.message || "Impossible de traiter cet evenement");
-    } finally {
-      setBusyKey(null);
-    }
-  }
-
-  function startEditEvent(item: AdminPendingEvent) {
-    setEditingEventId(item.id);
-    setEventForms((current) => ({
-      ...current,
-      [item.id]: {
-        title: item.title || "",
-        content: item.content || "",
-        address: item.address || "",
-        startAt: formatDateForInput(item.startAt),
-        endAt: formatDateForInput(item.endAt),
-        registrationDeadline: formatDateForInput(item.registrationDeadline),
-        imageUrl: item.imageUrl || "",
-      },
-    }));
-  }
-
-  async function onSaveEvent(item: AdminPendingEvent) {
-    const form = eventForms[item.id];
-    if (!form?.title?.trim() || !form.content.trim() || !form.address.trim()) {
-      return Alert.alert("Erreur", "Tous les champs de l'evenement sont requis");
-    }
-    const payload = buildEventPayload(form);
-    if ("error" in payload) return Alert.alert("Erreur", payload.error);
-    try {
-      setBusyKey(`event-${item.id}-save`);
-      await updateAdminPostApi(item.id, payload);
-      setEditingEventId(null);
-      Alert.alert("Enregistre", "L'evenement a ete modifie");
-      await load();
-    } catch (e: any) {
-      Alert.alert("Erreur", e?.message || "Impossible de modifier cet evenement");
     } finally {
       setBusyKey(null);
     }
@@ -422,58 +323,64 @@ export default function AdminScreen() {
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       <View style={styles.topBar}>
-        <View style={{ width: 30 }} />
         <Text style={styles.title}>Espace administrateur</Text>
-        <Pressable onPress={() => router.replace({ pathname: "/(user)/(tabs)", params: { asUser: "1" } } as any)} hitSlop={10}>
-          <Text style={styles.switchLink}>Voir en tant qu'utilisateur</Text>
-        </Pressable>
       </View>
 
-      <Text style={styles.subtitle}>Validez les comptes, moderez les verres, produits et evenements, puis gerez leurs modifications, suppressions et annulations depuis ce meme espace.</Text>
 
       <View style={styles.utilityCard}>
         <Text style={styles.utilityTitle}>Messagerie</Text>
-        <Text style={styles.utilityText}>Chaque compte est maintenant consultable. Ouvrez son profil pour le contacter.</Text>
         <Button label="Ouvrir la messagerie" onPress={() => router.push("/(user)/(tabs)/messages" as any)} style={styles.fullButton} />
       </View>
 
       <View style={styles.segmentWrap}>
-        <Pressable onPress={() => setTab("accounts")} style={[styles.segment, tab === "accounts" ? styles.segmentActive : null]}><Text style={[styles.segmentText, tab === "accounts" ? styles.segmentTextActive : null]}>Comptes</Text></Pressable>
-        <Pressable onPress={() => setTab("glasses")} style={[styles.segment, tab === "glasses" ? styles.segmentActive : null]}><Text style={[styles.segmentText, tab === "glasses" ? styles.segmentTextActive : null]}>Verres</Text></Pressable>
-        <Pressable onPress={() => setTab("products")} style={[styles.segment, tab === "products" ? styles.segmentActive : null]}><Text style={[styles.segmentText, tab === "products" ? styles.segmentTextActive : null]}>Produits</Text></Pressable>
-        <Pressable onPress={() => setTab("events")} style={[styles.segment, tab === "events" ? styles.segmentActive : null]}><Text style={[styles.segmentText, tab === "events" ? styles.segmentTextActive : null]}>Evenements</Text></Pressable>
+        {renderTabButton("accounts", "Comptes", pendingAccounts.length)}
+        {renderTabButton("glasses", "Verres", pendingGlasses.length)}
+        {renderTabButton("products", "Produits", pendingProducts.length)}
+        {renderTabButton("events", "Evenements", pendingEvents.length)}
+      </View>
+
+      <View style={styles.filtersCard}>
+        <View style={styles.searchWrap}>
+          <Ionicons name="search-outline" size={18} color={colors.muted as any} />
+          <TextInput
+            value={searchQuery}
+            onChangeText={(value) => setSearchByTab((current) => ({ ...current, [tab]: value }))}
+            placeholder=""
+            placeholderTextColor={colors.muted}
+            style={styles.search}
+            autoCapitalize="none"
+          />
+        </View>
+        <Pressable
+          onPress={() => setPendingOnlyByTab((current) => ({ ...current, [tab]: !current[tab] }))}
+          style={[styles.pendingFilterButton, pendingOnly ? styles.pendingFilterButtonActive : null]}
+        >
+          <Text style={[styles.pendingFilterText, pendingOnly ? styles.pendingFilterTextActive : null]}>
+            En attente de validation
+          </Text>
+        </Pressable>
       </View>
 
       {loading ? <Text style={styles.loading}>Chargement...</Text> : null}
 
       {!loading && tab === "accounts" ? (
         <View>
-          {accounts.map((item) => (
-            <Pressable key={item.id} style={styles.card} onPress={() => router.push({ pathname: "/(user)/profile/[id]", params: { id: String(item.id), fromAdmin: "1" } } as any)}>
-              <View style={styles.rowBetween}>
-                <Text style={styles.cardTitle}>{item.username}</Text>
-                <Text style={styles.badge}>{accountStatusLabel(item.status)}</Text>
-              </View>
-              <Text style={styles.meta}>{item.email} · {item.role === "BREWER" ? "Brasseur" : "Utilisateur"}</Text>
-              <Text style={styles.meta}>Creation: {formatDateTime(item.createdAt)}</Text>
-              {item.brewery ? <Text style={styles.meta}>Brasserie: {item.brewery.name}{item.brewery.vatNumber ? ` · TVA ${item.brewery.vatNumber}` : ""}</Text> : null}
-              {item.statusReason ? <Text style={styles.reject}>Motif: {item.statusReason}</Text> : null}
-              <Text style={styles.openHint}>Touchez pour consulter ce compte et le contacter</Text>
-              <Input label="Motif de suspension" value={accountReasons[item.id] || ""} onChangeText={(value) => setAccountReasons((current) => ({ ...current, [item.id]: value }))} />
-              <View style={styles.actionsRow}>
-                <Button label={busyKey === `account-${item.id}-validate` ? "..." : "Valider"} onPress={() => onReviewAccount(item, "validate")} disabled={busyKey != null} />
-                <Button label={busyKey === `account-${item.id}-suspend` ? "..." : "Suspendre"} variant="secondary" onPress={() => onReviewAccount(item, "suspend")} disabled={busyKey != null} />
-              </View>
-            </Pressable>
-          ))}
-          {accounts.length === 0 ? <Text style={styles.empty}>Aucun compte a moderer.</Text> : null}
+          {filteredPendingAccounts.map((item) => renderAccountCard(item))}
+          {pendingOnly && filteredPendingAccounts.length === 0 ? <Text style={styles.empty}>Aucun compte en attente.</Text> : null}
+
+          {!pendingOnly ? (
+            <>
+              <Text style={styles.sectionTitle}>Comptes geres</Text>
+              {filteredManagedAccounts.map((item) => renderAccountCard(item))}
+              {filteredManagedAccounts.length === 0 ? <Text style={styles.empty}>Aucun autre compte a afficher.</Text> : null}
+            </>
+          ) : null}
         </View>
       ) : null}
 
       {!loading && tab === "glasses" ? (
         <View>
-          <Text style={styles.sectionTitle}>Verres en attente</Text>
-          {pendingGlasses.map((item) => {
+          {filteredPendingGlasses.map((item) => {
             const imageUrl = item.images?.find((img) => img.isPrimary)?.url || item.images?.[0]?.url;
             return (
               <View key={item.id} style={styles.card}>
@@ -490,34 +397,44 @@ export default function AdminScreen() {
               </View>
             );
           })}
-          {pendingGlasses.length === 0 ? <Text style={styles.empty}>Aucun verre en attente.</Text> : null}
+          {pendingOnly && filteredPendingGlasses.length === 0 ? <Text style={styles.empty}>Aucun verre en attente.</Text> : null}
 
-          <Text style={styles.sectionTitle}>Verres valides a gerer</Text>
-          {managedGlasses.map((item) => {
-            const imageUrl = item.images?.find((img) => img.isPrimary)?.url || item.images?.[0]?.url;
-            const form = glassForms[item.id] || { name: item.name || "", description: item.description || "" };
-            return (
-              <View key={item.id} style={styles.card}>
-                {imageUrl ? <Image source={{ uri: imageUrl }} style={styles.image} resizeMode="cover" /> : null}
-                <View style={styles.rowBetween}><Text style={styles.cardTitle}>{item.name}</Text><Text style={styles.badge}>{contentStatusLabel(item.status)}</Text></View>
-                <Text style={styles.meta}>{item.Manufacturer?.name || "Brasserie inconnue"}</Text>
-                <Input label="Nom" value={form.name} onChangeText={(value) => updateManagedGlass(item.id, "name", value)} />
-                <Input label="Description" value={form.description} onChangeText={(value) => updateManagedGlass(item.id, "description", value)} multiline style={styles.multilineInput} />
-                <View style={styles.actionsRow}>
-                  <Button label={busyKey === `glass-${item.id}-save` ? "..." : "Modifier"} onPress={() => onSaveGlass(item)} disabled={busyKey != null} />
-                  <Button label={busyKey === `glass-${item.id}-delete` ? "..." : "Supprimer"} variant="secondary" onPress={() => onDeleteGlass(item)} disabled={busyKey != null} />
-                </View>
-              </View>
-            );
-          })}
-          {managedGlasses.length === 0 ? <Text style={styles.empty}>Aucun verre valide a gerer.</Text> : null}
+          {!pendingOnly ? <Text style={styles.sectionTitle}>Verres valides a gerer</Text> : null}
+          {!pendingOnly ? (
+            <View style={styles.catalogGrid}>
+              {filteredManagedGlasses.map((item) => {
+                const imageUrl = primaryImageUrl(item);
+                return (
+                  <Pressable
+                    key={item.id}
+                    style={styles.catalogCard}
+                    onPress={() => router.push({ pathname: "/(user)/admin-glass/[id]", params: { id: String(item.id) } } as any)}
+                  >
+                    <View style={styles.catalogImageWrap}>
+                      {imageUrl ? (
+                        <Image source={{ uri: imageUrl }} style={styles.catalogImage} resizeMode="cover" />
+                      ) : (
+                        <Text style={styles.catalogImageEmoji}>🍺</Text>
+                      )}
+                      <View style={styles.catalogBadge}>
+                        <Text style={styles.catalogBadgeText}>Valide</Text>
+                      </View>
+                    </View>
+                    <Text style={styles.catalogTitle} numberOfLines={1}>{item.name}</Text>
+                    <Text style={styles.catalogSubtitle} numberOfLines={1}>{item.Manufacturer?.name || "Brasserie inconnue"}</Text>
+                    {item.description ? <Text style={styles.catalogDescription} numberOfLines={3}>{item.description}</Text> : null}
+                  </Pressable>
+                );
+              })}
+            </View>
+          ) : null}
+          {!pendingOnly && filteredManagedGlasses.length === 0 ? <Text style={styles.empty}>Aucun verre valide a gerer.</Text> : null}
         </View>
       ) : null}
 
       {!loading && tab === "products" ? (
         <View>
-          <Text style={styles.sectionTitle}>Produits en attente</Text>
-          {pendingProducts.map((item) => (
+          {filteredPendingProducts.map((item) => (
             <View key={item.id} style={styles.card}>
               {item.imageUrl ? <Image source={{ uri: item.imageUrl }} style={styles.image} resizeMode="cover" /> : null}
               <View style={styles.rowBetween}><Text style={styles.cardTitle}>{item.name}</Text><Text style={styles.badge}>{contentStatusLabel(item.status)}</Text></View>
@@ -531,52 +448,48 @@ export default function AdminScreen() {
               </View>
             </View>
           ))}
-          {pendingProducts.length === 0 ? <Text style={styles.empty}>Aucun produit en attente.</Text> : null}
+          {pendingOnly && filteredPendingProducts.length === 0 ? <Text style={styles.empty}>Aucun produit en attente.</Text> : null}
 
-          <Text style={styles.sectionTitle}>Produits valides a gerer</Text>
-          {managedProducts.map((item) => {
-            const form = productForms[item.id] || { name: item.name || "", description: item.description || "", price: item.price != null ? String(item.price) : "", imageUrl: item.imageUrl || "", isAvailable: item.isAvailable !== false };
-            return (
-              <View key={item.id} style={styles.card}>
-                {form.imageUrl ? <Image source={{ uri: form.imageUrl }} style={styles.image} resizeMode="cover" /> : null}
-                <View style={styles.rowBetween}><Text style={styles.cardTitle}>{item.name}</Text><Text style={styles.badge}>{contentStatusLabel(item.status)}</Text></View>
-                <Text style={styles.meta}>{item.Manufacturer?.name || "Brasserie"}</Text>
-                <Input label="Nom" value={form.name} onChangeText={(value) => updateManagedProduct(item.id, "name", value)} />
-                <Input label="Description" value={form.description} onChangeText={(value) => updateManagedProduct(item.id, "description", value)} multiline style={styles.multilineInput} />
-                <Input label="Prix" value={form.price} onChangeText={(value) => updateManagedProduct(item.id, "price", value)} keyboardType="decimal-pad" />
-                <Input label="Image URL" value={form.imageUrl} onChangeText={(value) => updateManagedProduct(item.id, "imageUrl", value)} autoCapitalize="none" />
-                <Text style={styles.meta}>Disponibilite: {form.isAvailable ? "En vente" : "Masque"}</Text>
-                <View style={styles.actionsRow}>
-                  <Button label={form.isAvailable ? "Masquer" : "Rendre visible"} variant="secondary" onPress={() => updateManagedProduct(item.id, "isAvailable", !form.isAvailable)} disabled={busyKey != null} />
-                </View>
-                <View style={styles.actionsRow}>
-                  <Button label={busyKey === `product-${item.id}-save` ? "..." : "Modifier"} onPress={() => onSaveProduct(item)} disabled={busyKey != null} />
-                  <Button label={busyKey === `product-${item.id}-delete` ? "..." : "Supprimer"} variant="secondary" onPress={() => onDeleteProduct(item)} disabled={busyKey != null} />
-                </View>
-              </View>
-            );
-          })}
-          {managedProducts.length === 0 ? <Text style={styles.empty}>Aucun produit valide a gerer.</Text> : null}
+          {!pendingOnly ? <Text style={styles.sectionTitle}>Produits valides a gerer</Text> : null}
+          {!pendingOnly ? (
+            <View style={styles.catalogGrid}>
+              {filteredManagedProducts.map((item) => (
+                <Pressable
+                  key={item.id}
+                  style={styles.catalogCard}
+                  onPress={() => router.push({ pathname: "/(user)/admin-product/[id]", params: { id: String(item.id) } } as any)}
+                >
+                  <View style={styles.catalogImageWrap}>
+                    {item.imageUrl ? (
+                      <Image source={{ uri: item.imageUrl }} style={styles.catalogImage} resizeMode="cover" />
+                    ) : (
+                      <Text style={styles.catalogImageEmoji}>🍺</Text>
+                    )}
+                    <View style={styles.catalogBadge}>
+                      <Text style={styles.catalogBadgeText}>Valide</Text>
+                    </View>
+                  </View>
+                  <Text style={styles.catalogTitle} numberOfLines={1}>{item.name}</Text>
+                  <Text style={styles.catalogSubtitle} numberOfLines={1}>{item.Manufacturer?.name || "Brasserie"}</Text>
+                  {item.description ? <Text style={styles.catalogDescription} numberOfLines={3}>{item.description}</Text> : null}
+                </Pressable>
+              ))}
+            </View>
+          ) : null}
+          {!pendingOnly && filteredManagedProducts.length === 0 ? <Text style={styles.empty}>Aucun produit valide a gerer.</Text> : null}
         </View>
       ) : null}
 
       {!loading && tab === "events" ? (
         <View>
-          <View style={styles.card}>
-            <Text style={styles.cardTitle}>Publier un evenement admin</Text>
-            <Text style={styles.helper}>Format des dates : jj/mm/aaaa</Text>
-            <Input label="Titre" value={eventForm.title} onChangeText={(value) => updateEventForm("title", value)} />
-            <Input label="Description" value={eventForm.content} onChangeText={(value) => updateEventForm("content", value)} multiline style={styles.multilineInput} />
-            <Input label="Adresse" value={eventForm.address} onChangeText={(value) => updateEventForm("address", value)} />
-            <Input label="Date de debut (jj/mm/aaaa)" value={eventForm.startAt} onChangeText={(value) => updateEventForm("startAt", value)} />
-            <Input label="Date de fin (jj/mm/aaaa)" value={eventForm.endAt} onChangeText={(value) => updateEventForm("endAt", value)} />
-            <Input label="Date limite d'inscription (jj/mm/aaaa)" value={eventForm.registrationDeadline} onChangeText={(value) => updateEventForm("registrationDeadline", value)} />
-            <Input label="Image URL optionnelle" value={eventForm.imageUrl} onChangeText={(value) => updateEventForm("imageUrl", value)} autoCapitalize="none" />
-            <Button label={busyKey === "create-admin-event" ? "Publication..." : "Publier l'evenement"} onPress={onCreateAdminEvent} disabled={busyKey != null} style={styles.fullButton} />
-          </View>
+          {!pendingOnly ? (
+            <View style={styles.card}>
+              <Text style={styles.cardTitle}>Publication d'evenement admin</Text>
+              <Button label="Ouvrir le formulaire" onPress={() => router.push("/(user)/admin-event-create" as any)} style={styles.fullButton} />
+            </View>
+          ) : null}
 
-          <Text style={styles.sectionTitle}>Evenements en attente</Text>
-          {pendingEvents.map((item) => (
+          {filteredPendingEvents.map((item) => (
             <View key={item.id} style={styles.card}>
               <View style={styles.rowBetween}><Text style={styles.cardTitle}>{item.title}</Text><Text style={styles.badge}>{contentStatusLabel(item.status)}</Text></View>
               <Text style={styles.meta}>{item.Manufacturer?.name || "Brasserie"}</Text>
@@ -591,12 +504,10 @@ export default function AdminScreen() {
               </View>
             </View>
           ))}
-          {pendingEvents.length === 0 ? <Text style={styles.empty}>Aucun evenement en attente.</Text> : null}
+          {pendingOnly && filteredPendingEvents.length === 0 ? <Text style={styles.empty}>Aucun evenement en attente.</Text> : null}
 
-          <Text style={styles.sectionTitle}>Evenements valides a gerer</Text>
-          {managedEvents.map((item) => {
-            const form = eventForms[item.id] || initialEventForm;
-            const isEditing = editingEventId === item.id;
+          {!pendingOnly ? <Text style={styles.sectionTitle}>Evenements valides a gerer</Text> : null}
+          {!pendingOnly ? filteredManagedEvents.map((item) => {
             return (
               <View key={item.id} style={styles.card}>
                 {item.imageUrl ? <Image source={{ uri: item.imageUrl }} style={styles.image} resizeMode="cover" /> : null}
@@ -607,26 +518,10 @@ export default function AdminScreen() {
                 <Text style={styles.meta}>Adresse: {item.address || "A confirmer"}</Text>
                 {item.isCancelled ? <Text style={styles.reject}>Evenement annule{item.cancellationReason ? ` · Motif: ${item.cancellationReason}` : ""}</Text> : null}
 
-                {isEditing ? (
-                  <View style={styles.editPanel}>
-                    <Input label="Titre" value={form.title} onChangeText={(value) => updateManagedEvent(item.id, "title", value)} />
-                    <Input label="Description" value={form.content} onChangeText={(value) => updateManagedEvent(item.id, "content", value)} multiline style={styles.multilineInput} />
-                    <Input label="Adresse" value={form.address} onChangeText={(value) => updateManagedEvent(item.id, "address", value)} />
-                    <Input label="Date de debut (jj/mm/aaaa)" value={form.startAt} onChangeText={(value) => updateManagedEvent(item.id, "startAt", value)} />
-                    <Input label="Date de fin (jj/mm/aaaa)" value={form.endAt} onChangeText={(value) => updateManagedEvent(item.id, "endAt", value)} />
-                    <Input label="Date limite d'inscription (jj/mm/aaaa)" value={form.registrationDeadline} onChangeText={(value) => updateManagedEvent(item.id, "registrationDeadline", value)} />
-                    <Input label="Image URL optionnelle" value={form.imageUrl} onChangeText={(value) => updateManagedEvent(item.id, "imageUrl", value)} autoCapitalize="none" />
-                    <View style={styles.actionsRow}>
-                      <Button label={busyKey === `event-${item.id}-save` ? "..." : "Valider les modifications"} onPress={() => onSaveEvent(item)} disabled={busyKey != null} />
-                      <Button label="Annuler" variant="secondary" onPress={() => setEditingEventId(null)} disabled={busyKey != null} />
-                    </View>
-                  </View>
-                ) : (
-                  <View style={styles.actionsRow}>
-                    <Button label="Modifier" onPress={() => startEditEvent(item)} disabled={busyKey != null} />
-                    <Button label={busyKey === `event-${item.id}-delete` ? "..." : "Supprimer"} variant="secondary" onPress={() => onDeleteEvent(item)} disabled={busyKey != null} />
-                  </View>
-                )}
+                <View style={styles.actionsRow}>
+                  <Button label="Modifier" onPress={() => router.push({ pathname: "/(user)/admin-event-edit/[id]", params: { id: String(item.id) } } as any)} disabled={busyKey != null} />
+                  <Button label={busyKey === `event-${item.id}-delete` ? "..." : "Supprimer"} variant="secondary" onPress={() => onDeleteEvent(item)} disabled={busyKey != null} />
+                </View>
 
                 {!item.isCancelled ? (
                   <>
@@ -638,8 +533,8 @@ export default function AdminScreen() {
                 ) : null}
               </View>
             );
-          })}
-          {managedEvents.length === 0 ? <Text style={styles.empty}>Aucun evenement valide a gerer.</Text> : null}
+          }) : null}
+          {!pendingOnly && filteredManagedEvents.length === 0 ? <Text style={styles.empty}>Aucun evenement valide a gerer.</Text> : null}
         </View>
       ) : null}
     </ScrollView>
@@ -656,14 +551,34 @@ const styles = StyleSheet.create({
   utilityCard: { backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border, borderRadius: 18, padding: spacing.lg, marginBottom: spacing.lg },
   utilityTitle: { color: colors.text, fontWeight: "900", fontSize: 17 },
   utilityText: { color: colors.muted, marginTop: spacing.xs, lineHeight: 20 },
-  segmentWrap: { flexDirection: "row", gap: spacing.sm, marginBottom: spacing.lg, flexWrap: "wrap" },
-  segment: { minWidth: "23%", borderRadius: 14, paddingVertical: spacing.md, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.card, alignItems: "center" },
+  segmentWrap: { flexDirection: "row", gap: spacing.xs, marginBottom: spacing.lg, flexWrap: "nowrap" },
+  segment: { flex: 1, minWidth: 0, borderRadius: 14, paddingVertical: spacing.md, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.card, alignItems: "center" },
+  segmentInner: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6 },
   segmentActive: { backgroundColor: colors.primary, borderColor: colors.primaryDark },
-  segmentText: { color: colors.text, fontWeight: "900" },
+  segmentText: { color: colors.text, fontWeight: "900", fontSize: 12, textAlign: "center" },
   segmentTextActive: { color: "#2E1A0F" },
+  pendingBadge: { minWidth: 18, height: 18, paddingHorizontal: 5, borderRadius: 999, backgroundColor: "#D92D20", alignItems: "center", justifyContent: "center" },
+  pendingBadgeText: { color: "#FFFFFF", fontSize: 10, fontWeight: "900" },
+  filtersCard: { backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border, borderRadius: 18, padding: spacing.md, marginBottom: spacing.lg },
+  searchWrap: { flexDirection: "row", alignItems: "center", gap: spacing.sm, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.card, paddingHorizontal: spacing.md, paddingVertical: spacing.sm, borderRadius: 16 },
+  search: { flex: 1, color: colors.text, paddingVertical: 2 },
+  pendingFilterButton: { marginTop: spacing.sm, borderRadius: 14, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.bg2, paddingVertical: spacing.md, alignItems: "center" },
+  pendingFilterButtonActive: { backgroundColor: "#FDEAEA", borderColor: "#D92D20" },
+  pendingFilterText: { color: colors.text, fontWeight: "900" },
+  pendingFilterTextActive: { color: "#D92D20" },
   loading: { color: colors.muted, textAlign: "center", marginTop: spacing.lg },
   sectionTitle: { color: colors.text, fontWeight: "900", fontSize: 18, marginBottom: spacing.sm, marginTop: spacing.lg },
   card: { backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border, borderRadius: 18, padding: spacing.lg, marginBottom: spacing.md },
+  catalogGrid: { flexDirection: "row", flexWrap: "wrap", justifyContent: "space-between" },
+  catalogCard: { width: "48%", borderRadius: 18, backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border, padding: spacing.sm, marginBottom: spacing.md },
+  catalogImageWrap: { height: 140, borderRadius: 14, backgroundColor: colors.bg2, borderWidth: 1, borderColor: colors.border, alignItems: "center", justifyContent: "center", marginBottom: spacing.sm, overflow: "hidden" },
+  catalogImage: { width: "100%", height: "100%" },
+  catalogImageEmoji: { fontSize: 34, color: colors.muted },
+  catalogBadge: { position: "absolute", left: spacing.sm, bottom: spacing.sm, backgroundColor: colors.badgeBg, paddingHorizontal: 10, paddingVertical: 4, borderRadius: 999 },
+  catalogBadgeText: { color: colors.badgeText, fontWeight: "900", fontSize: 12 },
+  catalogTitle: { fontSize: 15, fontWeight: "900", color: colors.text, marginTop: 2 },
+  catalogSubtitle: { marginTop: 4, color: colors.muted, fontSize: 12 },
+  catalogDescription: { marginTop: 6, color: colors.text, fontSize: 12, lineHeight: 18 },
   rowBetween: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: spacing.sm },
   cardTitle: { color: colors.text, fontWeight: "900", fontSize: 17, flex: 1 },
   badge: { color: colors.primaryDark, fontWeight: "900" },
@@ -676,6 +591,5 @@ const styles = StyleSheet.create({
   reject: { color: colors.dangerText, marginTop: spacing.sm, fontWeight: "700" },
   image: { width: "100%", height: 180, borderRadius: 14, marginBottom: spacing.md, backgroundColor: colors.bg2 },
   actionsRow: { flexDirection: "row", gap: spacing.sm, marginTop: spacing.sm, flexWrap: "wrap" },
-  editPanel: { marginTop: spacing.md, borderTopWidth: 1, borderTopColor: colors.border, paddingTop: spacing.md },
   empty: { color: colors.muted, textAlign: "center", marginTop: spacing.sm },
 });

@@ -8,7 +8,6 @@ import { useAuth } from "../../../src/store/useAuth";
 import { router, useFocusEffect } from "expo-router";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { getMyStatsApi, MyStats } from "../../../src/api/usersApi";
-import { listNotificationsApi } from "../../../src/api/notificationsApi";
 import { AdminStatsResponse, getAdminStatsApi } from "../../../src/api/adminApi";
 
 function formatDuration(seconds?: number | null) {
@@ -26,22 +25,18 @@ export default function Profile() {
   const [viewerVisible, setViewerVisible] = useState(false);
   const [stats, setStats] = useState<MyStats | null>(null);
   const [adminStats, setAdminStats] = useState<AdminStatsResponse | null>(null);
-  const [unreadCount, setUnreadCount] = useState(0);
-  const isBrewer = user?.role === "BREWER";
   const isAdmin = user?.role === "ADMIN";
 
   const load = useCallback(async () => {
     try {
-      const tasks: Promise<any>[] = [getMyStatsApi(), listNotificationsApi()];
+      const tasks: Promise<any>[] = [getMyStatsApi()];
       if (isAdmin) tasks.push(getAdminStatsApi());
-      const [statsRes, notificationsRes, adminStatsRes] = await Promise.all(tasks);
+      const [statsRes, adminStatsRes] = await Promise.all(tasks);
       setStats(statsRes);
-      setUnreadCount(notificationsRes.unreadCount ?? 0);
       setAdminStats(isAdmin ? (adminStatsRes as AdminStatsResponse) : null);
     } catch {
       setStats(null);
       setAdminStats(null);
-      setUnreadCount(0);
     }
   }, [isAdmin]);
 
@@ -62,15 +57,6 @@ export default function Profile() {
       <View style={styles.topBar}>
         <Text style={styles.topTitle}>{isAdmin ? "Profil administrateur" : "Profil"}</Text>
       </View>
-
-      {isAdmin ? (
-        <Pressable style={styles.adminHero} onPress={() => router.push("/(user)/(tabs)/admin" as any)}>
-          <Text style={styles.adminHeroEyebrow}>Compte administrateur</Text>
-          <Text style={styles.adminHeroTitle}>Acceder a l'espace administrateur</Text>
-          <Text style={styles.adminHeroText}>Validation des comptes, verres et evenements.</Text>
-          <Text style={styles.adminHeroArrow}>›</Text>
-        </Pressable>
-      ) : null}
 
       <View style={styles.headerCard}>
         <View style={styles.avatarWrap}>
@@ -130,16 +116,10 @@ export default function Profile() {
         </Pressable>
       ) : null}
 
-      <Pressable style={styles.item} onPress={() => router.push("/(user)/notifications" as any)}>
-        <Text style={styles.itemTitle}>Notifications</Text>
-        <Text style={styles.itemSub}>{unreadCount} notification{unreadCount > 1 ? "s" : ""} non lue{unreadCount > 1 ? "s" : ""}</Text>
-        <Text style={styles.itemArrow}>›</Text>
-      </Pressable>
-
-      {isBrewer ? (
-        <Pressable style={styles.item} onPress={() => router.push("/(user)/(tabs)/brewer" as any)}>
-          <Text style={styles.itemTitle}>Espace brasseur</Text>
-          <Text style={styles.itemSub}>Produits, evenements et suivi de vos contenus</Text>
+      {!isAdmin ? (
+        <Pressable style={styles.item} onPress={() => router.push("/(user)/notifications" as any)}>
+          <Text style={styles.itemTitle}>Notifications</Text>
+          <Text style={styles.itemSub}>Acceder a vos notifications</Text>
           <Text style={styles.itemArrow}>›</Text>
         </Pressable>
       ) : null}
@@ -174,20 +154,6 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.bg },
   topBar: { paddingTop: spacing.xl, paddingBottom: spacing.md, alignItems: "center" },
   topTitle: { fontSize: typography.h1, fontWeight: "900", color: colors.text },
-  adminHero: {
-    marginHorizontal: spacing.lg,
-    marginBottom: spacing.md,
-    padding: spacing.lg,
-    borderRadius: 18,
-    backgroundColor: colors.primarySoft,
-    borderWidth: 1,
-    borderColor: colors.primaryDark,
-    position: "relative",
-  },
-  adminHeroEyebrow: { color: colors.primaryDark, fontWeight: "900", fontSize: 12, textTransform: "uppercase" },
-  adminHeroTitle: { color: colors.text, fontWeight: "900", fontSize: 20, marginTop: spacing.xs },
-  adminHeroText: { color: colors.text, marginTop: spacing.sm, lineHeight: 20, paddingRight: 24 },
-  adminHeroArrow: { position: "absolute", right: spacing.lg, top: "50%", marginTop: -16, fontSize: 30, color: colors.primaryDark, fontWeight: "900" },
   headerCard: {
     marginHorizontal: spacing.lg,
     padding: spacing.lg,
