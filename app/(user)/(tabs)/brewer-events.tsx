@@ -1,6 +1,8 @@
 ﻿import React, { useEffect, useMemo, useState } from "react";
-import { Alert, ScrollView, StyleSheet, Text, View } from "react-native";
+import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { openBrowserAsync } from "expo-web-browser";
+import Ionicons from "@expo/vector-icons/Ionicons";
+import { router } from "expo-router";
 import Input from "../../../src/components/Input";
 import Button from "../../../src/components/Button";
 import { colors } from "../../../src/theme/colors";
@@ -10,9 +12,9 @@ import {
   BreweryEventParticipant,
   BreweryPost,
   buildBreweryEventParticipantsPdfUrl,
-  createBreweryPostApi,
   listBreweryPostParticipantsApi,
   listMyBreweryPostsApi,
+  reviewBreweryPostParticipationApi,
 } from "../../../src/api/brewerApi";
 import { useAuth } from "../../../src/store/useAuth";
 
@@ -35,17 +37,6 @@ function formatDateTime(value?: string | null) {
   });
 }
 
-function toApiDateString(value: string) {
-  const cleaned = value.trim();
-  const match = cleaned.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
-  if (!match) return null;
-  const [, dd, mm, yyyy] = match;
-  const iso = `${yyyy}-${mm}-${dd}T00:00:00.000Z`;
-  const date = new Date(iso);
-  if (Number.isNaN(date.getTime())) return null;
-  return iso;
-}
-
 function isDeadlineReached(value?: string | null) {
   if (!value) return false;
   const date = new Date(value);
@@ -54,19 +45,13 @@ function isDeadlineReached(value?: string | null) {
 
 export default function BrewerEventsScreen() {
   const { token } = useAuth();
-  const [title, setTitle] = useState("");
-  const [content, setContent] = useState("");
-  const [imageUrl, setImageUrl] = useState("");
-  const [address, setAddress] = useState("");
-  const [startAt, setStartAt] = useState("");
-  const [endAt, setEndAt] = useState("");
-  const [registrationDeadline, setRegistrationDeadline] = useState("");
   const [items, setItems] = useState<BreweryPost[]>([]);
-  const [loading, setLoading] = useState(false);
   const [exportingId, setExportingId] = useState<number | null>(null);
   const [participantsLoadingId, setParticipantsLoadingId] = useState<number | null>(null);
   const [visibleParticipantsForId, setVisibleParticipantsForId] = useState<number | null>(null);
   const [participantsByPostId, setParticipantsByPostId] = useState<Record<number, BreweryEventParticipant[]>>({});
+  const [reviewBusyKey, setReviewBusyKey] = useState<string | null>(null);
+  const [rejectReasonsByParticipationId, setRejectReasonsByParticipationId] = useState<Record<number, string>>({});
 
   async function load() {
     const res = await listMyBreweryPostsApi();
@@ -81,48 +66,9 @@ export default function BrewerEventsScreen() {
     return [...items].sort((a, b) => {
       const first = new Date(a.startAt || a.publishedAt || a.createdAt || 0).getTime();
       const second = new Date(b.startAt || b.publishedAt || b.createdAt || 0).getTime();
-      return first - second;
+      return second - first;
     });
   }, [items]);
-
-  async function onSubmit() {
-    if (!title.trim()) return Alert.alert("Erreur", "Titre de l'evenement requis");
-    if (!content.trim()) return Alert.alert("Erreur", "Description de l'evenement requise");
-    if (!address.trim()) return Alert.alert("Erreur", "Adresse requise");
-
-    const startAtIso = toApiDateString(startAt);
-    const endAtIso = toApiDateString(endAt);
-    const deadlineIso = toApiDateString(registrationDeadline);
-    if (!startAtIso || !endAtIso || !deadlineIso) {
-      return Alert.alert("Erreur", "Introduisez les dates au format jj/mm/aaaa");
-    }
-
-    try {
-      setLoading(true);
-      await createBreweryPostApi({
-        title: title.trim(),
-        content: content.trim(),
-        imageUrl: imageUrl.trim() || null,
-        address: address.trim(),
-        startAt: startAtIso,
-        endAt: endAtIso,
-        registrationDeadline: deadlineIso,
-      });
-      setTitle("");
-      setContent("");
-      setImageUrl("");
-      setAddress("");
-      setStartAt("");
-      setEndAt("");
-      setRegistrationDeadline("");
-      await load();
-      Alert.alert("Evenement envoye", "Votre evenement a ete envoye pour validation admin.");
-    } catch (err: any) {
-      Alert.alert("Erreur", err?.message || "Impossible d'envoyer l'evenement");
-    } finally {
-      setLoading(false);
-    }
-  }
 
   async function onShowParticipants(item: BreweryPost) {
     if (visibleParticipantsForId === item.id) {
@@ -155,27 +101,59 @@ export default function BrewerEventsScreen() {
     }
   }
 
+  async function onReviewParticipation(
+    postId: number,
+    participation: BreweryEventParticipant,
+    action: "validate" | "reject"
+  ) {
+    const reason = (rejectReasonsByParticipationId[participation.id] || "").trim();
+    if (action === "reject" && reason.length < 3) {
+      return Alert.alert("Erreur", "Motif de rejet requis");
+    }
+
+    try {
+      setReviewBusyKey(`${participation.id}-${action}`);
+      await reviewBreweryPostParticipationApi(postId, participation.id, {
+        action,
+        rejectReason: action === "reject" ? reason : undefined,
+      });
+      const res = await listBreweryPostParticipantsApi(postId);
+      setParticipantsByPostId((current) => ({ ...current, [postId]: res.items ?? [] }));
+      if (action === "reject") {
+        setRejectReasonsByParticipationId((current) => ({ ...current, [participation.id]: "" }));
+      }
+    } catch (err: any) {
+      Alert.alert("Erreur", err?.message || "Impossible de traiter cette participation");
+    } finally {
+      setReviewBusyKey(null);
+    }
+  }
+
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      <Text style={styles.title}>Evenements brasseur</Text>
+      <View style={styles.topBar}>
+        <Pressable onPress={() => router.push("/(user)/(tabs)/brewer" as any)} style={styles.backBtn} hitSlop={10}>
+          <Ionicons name="chevron-back" size={20} color={colors.text as any} />
+        </Pressable>
+        <Text style={styles.title}>Evenements brasseur</Text>
+        <View style={{ width: 40 }} />
+      </View>
       <Text style={styles.subtitle}>Proposez vos evenements. Ils seront visibles apres validation de l'admin. La liste des participants valides est consultable, et le PDF devient telechargeable apres la date limite.</Text>
 
-      <View style={styles.card}>
-        <Input label="Titre de l'evenement" value={title} onChangeText={setTitle} />
-        <Input label="Description" value={content} onChangeText={setContent} multiline numberOfLines={5} style={{ minHeight: 110, textAlignVertical: "top" } as any} />
-        <Input label="Adresse" value={address} onChangeText={setAddress} />
-        <Input label="Date de debut (jj/mm/aaaa)" value={startAt} onChangeText={setStartAt} />
-        <Input label="Date de fin (jj/mm/aaaa)" value={endAt} onChangeText={setEndAt} />
-        <Input label="Date limite de participation (jj/mm/aaaa)" value={registrationDeadline} onChangeText={setRegistrationDeadline} />
-        <Input label="URL image (optionnel)" value={imageUrl} onChangeText={setImageUrl} autoCapitalize="none" />
-        <Button label={loading ? "Envoi..." : "Valider le formulaire"} onPress={onSubmit} disabled={loading} />
-      </View>
+      <Button
+        label="Ajouter un evenement"
+        onPress={() => router.push("/(user)/brewer-event-create" as any)}
+        style={styles.createButton}
+      />
 
       <Text style={styles.sectionTitle}>Mes evenements</Text>
       {sortedItems.map((item) => {
         const canExport = item.status === "VALIDE" && isDeadlineReached(item.registrationDeadline);
         const isParticipantsVisible = visibleParticipantsForId === item.id;
         const participants = participantsByPostId[item.id] ?? [];
+        const pendingParticipants = participants.filter((entry) => entry.status === "EN_ATTENTE");
+        const validatedParticipants = participants.filter((entry) => entry.status === "VALIDE");
+        const rejectedParticipants = participants.filter((entry) => entry.status === "REJETE");
 
         return (
           <View key={item.id} style={styles.listCard}>
@@ -191,7 +169,7 @@ export default function BrewerEventsScreen() {
             {item.rejectReason ? <Text style={styles.reject}>Motif: {item.rejectReason}</Text> : null}
 
             <Button
-              label={participantsLoadingId === item.id ? "Chargement..." : isParticipantsVisible ? "Masquer les participants" : "Voir les participants"}
+              label={participantsLoadingId === item.id ? "Chargement..." : isParticipantsVisible ? "Masquer les demandes" : "Voir les demandes"}
               onPress={() => onShowParticipants(item)}
               disabled={participantsLoadingId === item.id}
               variant="secondary"
@@ -200,17 +178,69 @@ export default function BrewerEventsScreen() {
 
             {isParticipantsVisible ? (
               <View style={styles.participantsCard}>
-                <Text style={styles.participantsTitle}>Participants valides</Text>
+                <Text style={styles.participantsTitle}>Demandes de participation</Text>
                 {participants.length === 0 ? (
-                  <Text style={styles.emptyParticipants}>Aucun participant valide pour le moment.</Text>
+                  <Text style={styles.emptyParticipants}>Aucune demande de participation pour le moment.</Text>
                 ) : (
-                  participants.map((entry, index) => (
-                    <View key={entry.id} style={styles.participantRow}>
-                      <Text style={styles.participantName}>{index + 1}. {entry.participant?.username || "Utilisateur"}</Text>
-                      <Text style={styles.participantEmail}>{entry.participant?.email || "Email non renseigne"}</Text>
-                      <Text style={styles.participantDate}>Inscription: {formatDateTime(entry.createdAt)}</Text>
-                    </View>
-                  ))
+                  <>
+                    {pendingParticipants.length > 0 ? (
+                      <View style={styles.participantsBlock}>
+                        <Text style={styles.participantsSubtitle}>En attente</Text>
+                        {pendingParticipants.map((entry, index) => (
+                          <View key={entry.id} style={styles.participantRow}>
+                            <Text style={styles.participantName}>{index + 1}. {entry.participant?.username || "Utilisateur"}</Text>
+                            <Text style={styles.participantEmail}>{entry.participant?.email || "Email non renseigne"}</Text>
+                            <Text style={styles.participantDate}>Demande: {formatDateTime(entry.createdAt)}</Text>
+                            <Input
+                              label="Motif de rejet"
+                              value={rejectReasonsByParticipationId[entry.id] || ""}
+                              onChangeText={(value: string) => setRejectReasonsByParticipationId((current) => ({ ...current, [entry.id]: value }))}
+                            />
+                            <View style={styles.reviewActions}>
+                              <Button
+                                label={reviewBusyKey === `${entry.id}-validate` ? "..." : "Valider"}
+                                onPress={() => onReviewParticipation(item.id, entry, "validate")}
+                                disabled={reviewBusyKey != null}
+                              />
+                              <Button
+                                label={reviewBusyKey === `${entry.id}-reject` ? "..." : "Rejeter"}
+                                variant="secondary"
+                                onPress={() => onReviewParticipation(item.id, entry, "reject")}
+                                disabled={reviewBusyKey != null}
+                              />
+                            </View>
+                          </View>
+                        ))}
+                      </View>
+                    ) : null}
+
+                    {validatedParticipants.length > 0 ? (
+                      <View style={styles.participantsBlock}>
+                        <Text style={styles.participantsSubtitle}>Participations validees</Text>
+                        {validatedParticipants.map((entry, index) => (
+                          <View key={entry.id} style={styles.participantRow}>
+                            <Text style={styles.participantName}>{index + 1}. {entry.participant?.username || "Utilisateur"}</Text>
+                            <Text style={styles.participantEmail}>{entry.participant?.email || "Email non renseigne"}</Text>
+                            <Text style={styles.participantDate}>Validation: {formatDateTime(entry.reviewedAt || entry.createdAt)}</Text>
+                          </View>
+                        ))}
+                      </View>
+                    ) : null}
+
+                    {rejectedParticipants.length > 0 ? (
+                      <View style={styles.participantsBlock}>
+                        <Text style={styles.participantsSubtitle}>Participations rejetees</Text>
+                        {rejectedParticipants.map((entry, index) => (
+                          <View key={entry.id} style={styles.participantRow}>
+                            <Text style={styles.participantName}>{index + 1}. {entry.participant?.username || "Utilisateur"}</Text>
+                            <Text style={styles.participantEmail}>{entry.participant?.email || "Email non renseigne"}</Text>
+                            <Text style={styles.participantDate}>Rejet: {formatDateTime(entry.reviewedAt || entry.createdAt)}</Text>
+                            {entry.rejectReason ? <Text style={styles.reject}>Motif: {entry.rejectReason}</Text> : null}
+                          </View>
+                        ))}
+                      </View>
+                    ) : null}
+                  </>
                 )}
               </View>
             ) : null}
@@ -234,8 +264,25 @@ export default function BrewerEventsScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.bg },
   content: { padding: spacing.lg, paddingBottom: spacing.xxl },
-  title: { fontSize: typography.h1, fontWeight: "900", color: colors.text, marginBottom: spacing.sm },
+  topBar: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: spacing.lg, marginTop: spacing.lg },
+  backBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    backgroundColor: colors.card,
+    borderWidth: 1,
+    borderColor: colors.border,
+    alignItems: "center",
+    justifyContent: "center",
+    shadowColor: colors.shadow as any,
+    shadowOpacity: 0.15,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 6 },
+    elevation: 2,
+  },
+  title: { fontSize: typography.h1, fontWeight: "900", color: colors.text },
   subtitle: { color: colors.muted, marginBottom: spacing.lg, lineHeight: 20 },
+  createButton: { marginBottom: spacing.lg },
   card: { backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border, borderRadius: 18, padding: spacing.lg, marginBottom: spacing.xl },
   sectionTitle: { fontSize: typography.h2, fontWeight: "900", color: colors.text, marginBottom: spacing.md },
   listCard: { backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border, borderRadius: 16, padding: spacing.md, marginBottom: spacing.md },
@@ -249,11 +296,14 @@ const styles = StyleSheet.create({
   secondaryButton: { marginTop: spacing.md },
   participantsCard: { marginTop: spacing.md, borderTopWidth: 1, borderTopColor: colors.border, paddingTop: spacing.md },
   participantsTitle: { color: colors.text, fontWeight: "900", fontSize: 15, marginBottom: spacing.sm },
+  participantsBlock: { marginTop: spacing.sm },
+  participantsSubtitle: { color: colors.text, fontWeight: "800", marginBottom: spacing.sm },
   emptyParticipants: { color: colors.muted },
   participantRow: { paddingVertical: spacing.sm, borderBottomWidth: 1, borderBottomColor: colors.border },
   participantName: { color: colors.text, fontWeight: "800" },
   participantEmail: { color: colors.muted, marginTop: 2 },
   participantDate: { color: colors.muted, marginTop: 2, fontSize: 12 },
+  reviewActions: { flexDirection: "row", gap: spacing.sm, marginTop: spacing.sm },
   exportButton: { marginTop: spacing.md },
   empty: { color: colors.muted },
 });

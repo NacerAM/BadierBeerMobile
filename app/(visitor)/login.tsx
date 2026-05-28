@@ -31,12 +31,12 @@ export default function LoginScreen() {
         if (redirect) { router.replace(redirect as any); } else { router.replace("/(user)/" as any); }
       } catch (err: any) {
         const msg = err?.message || "Échec de la connexion";
-        if (err?.status === 403 && email.trim()) {
+        const canResendVerification = err?.status === 403 && email.trim() && msg === "Email non verifie";
+        if (canResendVerification) {
           Alert.alert(
             "Compte non actif",
             msg,
             [
-              { text: "Annuler" },
               {
                 text: "Renvoyer l'email",
                 onPress: async () => {
@@ -53,8 +53,11 @@ export default function LoginScreen() {
                   }
                 },
               },
+              { text: "OK" },
             ]
           );
+        } else if (err?.status === 403) {
+          Alert.alert("Compte non actif", msg, [{ text: "OK" }]);
         } else {
           Alert.alert("Erreur", msg);
         }

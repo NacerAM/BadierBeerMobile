@@ -34,6 +34,7 @@ export default function EventDetailScreen() {
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [contactingBrewer, setContactingBrewer] = useState(false);
+  const [contactingAdmin, setContactingAdmin] = useState(false);
 
   const load = useCallback(async () => {
     try {
@@ -74,6 +75,21 @@ export default function EventDetailScreen() {
       Alert.alert("Erreur", e?.message || "Impossible de contacter le brasseur");
     } finally {
       setContactingBrewer(false);
+    }
+  }
+
+  async function onContactAdmin() {
+    try {
+      setContactingAdmin(true);
+      const conversation = await openMessageConversationApi({
+        targetType: "ADMIN_SUPPORT",
+        initialMessage: `Bonjour, je souhaite poser une question au sujet de mon evenement #${eventId}.`,
+      });
+      router.push({ pathname: "/(user)/chat/[id]", params: { id: String(conversation.id) } } as any);
+    } catch (e: any) {
+      Alert.alert("Erreur", e?.message || "Impossible de contacter l'administrateur");
+    } finally {
+      setContactingAdmin(false);
     }
   }
 
@@ -129,7 +145,10 @@ export default function EventDetailScreen() {
         {!event.myParticipationStatus && event.registrationClosed ? <Text style={styles.statusInfo}>Les inscriptions sont cloturees.</Text> : null}
 
         <View style={styles.actionStack}>
-          {!isAdmin ? (
+          {!isAdmin && isOwnBrewerEvent ? (
+            <Button label={contactingAdmin ? "Ouverture..." : "Contacter l'admin"} variant="secondary" onPress={onContactAdmin} disabled={contactingAdmin} />
+          ) : null}
+          {!isAdmin && !isOwnBrewerEvent ? (
             <Button label={contactingBrewer ? "Ouverture..." : "Contacter le brasseur"} variant="secondary" onPress={onContactBrewer} disabled={contactingBrewer} />
           ) : null}
           {event.myParticipationStatus === "VALIDE" ? (

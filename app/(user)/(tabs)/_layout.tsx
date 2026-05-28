@@ -4,9 +4,12 @@ import { colors } from "../../../src/theme/colors";
 import { useCallback, useEffect, useState } from "react";
 import { listNotificationsApi } from "../../../src/api/notificationsApi";
 import { listMessageUnreadCountApi } from "../../../src/api/messagesApi";
+import { useAuth } from "../../../src/store/useAuth";
 
 export default function UserTabsLayout() {
   const pathname = usePathname();
+  const { user } = useAuth();
+  const isAdmin = user?.role === "ADMIN";
   const [unreadNotifications, setUnreadNotifications] = useState(0);
   const [unreadMessages, setUnreadMessages] = useState(0);
 
@@ -70,6 +73,7 @@ export default function UserTabsLayout() {
       <Tabs.Screen
         name="explore"
         options={{
+          href: isAdmin ? null : undefined,
           title: "Explorer",
           tabBarIcon: ({ color, size, focused }) => (
             <Ionicons name={focused ? "compass" : "compass-outline"} color={color} size={size ?? 22} />
@@ -79,6 +83,7 @@ export default function UserTabsLayout() {
       <Tabs.Screen
         name="notifications"
         options={{
+          href: isAdmin ? null : undefined,
           title: "Notifications",
           tabBarIcon: ({ color, size, focused }) => (
             <Ionicons name={focused ? "notifications" : "notifications-outline"} color={color} size={size ?? 22} />

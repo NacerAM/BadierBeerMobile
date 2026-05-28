@@ -1,5 +1,5 @@
 ﻿import React, { useCallback, useEffect, useState } from "react";
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { router, useFocusEffect, usePathname } from "expo-router";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import Button from "../../src/components/Button";
@@ -99,6 +99,14 @@ export default function NotificationsScreen() {
     if (item.type === "EVENT_CANCELLED" && user?.role === "BREWER") {
       router.push("/(user)/(tabs)/brewer-events" as any);
       return;
+    }
+
+    if (item.type === "EVENT_UPCOMING") {
+      const startAt = item.payload?.startAt ? new Date(item.payload.startAt) : null;
+      if (startAt && !Number.isNaN(startAt.getTime()) && startAt.getTime() < Date.now()) {
+        Alert.alert("Info", "L'evenement est deja passe.");
+        return;
+      }
     }
 
     if (

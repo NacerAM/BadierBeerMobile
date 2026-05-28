@@ -15,8 +15,10 @@ import {
   PublicBreweryProduct,
 } from "../../../src/api/publicContentApi";
 import { openMessageConversationApi } from "../../../src/api/messagesApi";
+import { useAuth } from "../../../src/store/useAuth";
 
 type ExploreMode = "events" | "products";
+type BrewerScope = "all" | "mine";
 
 function formatDateTime(value?: string | null) {
   if (!value) return "A confirmer";
@@ -33,13 +35,20 @@ function formatDateTime(value?: string | null) {
 
 function participationLabel(item: PublicBreweryEvent) {
   if (item.myParticipationStatus === "VALIDE") return "Participation validee";
-  if (item.myParticipationStatus === "EN_ATTENTE") return "Participation en attente de validation";
+  if (item.myParticipationStatus === "EN_ATTENTE") return "Participation en attente de validation par le brasseur";
+  if (item.myParticipationStatus === "REJETE") {
+    return item.myParticipationRejectReason
+      ? `Participation rejetee · Motif: ${item.myParticipationRejectReason}`
+      : "Participation rejetee";
+  }
   if (item.registrationClosed) return "Inscriptions cloturees";
   return null;
 }
 
 export default function ExploreScreen() {
+  const { user } = useAuth();
   const [mode, setMode] = useState<ExploreMode>("events");
+  const [scope, setScope] = useState<BrewerScope>("all");
   const [q, setQ] = useState("");
   const [products, setProducts] = useState<PublicBreweryProduct[]>([]);
   const [events, setEvents] = useState<PublicBreweryEvent[]>([]);
@@ -70,31 +79,53 @@ export default function ExploreScreen() {
 
   const filteredProducts = useMemo(() => {
     const query = q.trim().toLowerCase();
-    if (!query) return products;
-    return products.filter((item) =>
-      item.name.toLowerCase().includes(query) ||
-      (item.Manufacturer?.name || "").toLowerCase().includes(query) ||
-      (item.description || "").toLowerCase().includes(query)
-    );
-  }, [q, products]);
+    return products.filter((item) => {
+      const matchesText =
+        !query ||
+        item.name.toLowerCase().includes(query) ||
+        (item.Manufacturer?.name || "").toLowerCase().includes(query) ||
+        (item.description || "").toLowerCase().includes(query);
+
+      if (!matchesText) return false;
+
+      if (user?.role === "BREWER" && scope === "mine") {
+        return item.Manufacturer?.ownerUserId === user.id;
+      }
+
+      return true;
+    });
+  }, [q, products, scope, user?.id, user?.role]);
 
   const filteredEvents = useMemo(() => {
     const query = q.trim().toLowerCase();
-    if (!query) return events;
-    return events.filter((item) =>
-      item.title.toLowerCase().includes(query) ||
-      (item.Manufacturer?.name || "").toLowerCase().includes(query) ||
-      item.content.toLowerCase().includes(query) ||
-      (item.address || "").toLowerCase().includes(query)
-    );
-  }, [q, events]);
+    return events.filter((item) => {
+      const matchesText =
+        !query ||
+        item.title.toLowerCase().includes(query) ||
+        (item.Manufacturer?.name || "").toLowerCase().includes(query) ||
+        item.content.toLowerCase().includes(query) ||
+        (item.address || "").toLowerCase().includes(query);
+
+      if (!matchesText) return false;
+
+      if (user?.role === "BREWER" && scope === "mine") {
+        return item.Manufacturer?.ownerUserId === user.id;
+      }
+
+      return true;
+    }).sort((a, b) => {
+      const first = new Date(a.startAt || a.publishedAt || a.createdAt || 0).getTime();
+      const second = new Date(b.startAt || b.publishedAt || b.createdAt || 0).getTime();
+      return second - first;
+    });
+  }, [q, events, scope, user?.id, user?.role]);
 
   async function onParticipate(eventId: number) {
     try {
       setSubmittingEventId(eventId);
       await participateInEventApi(eventId);
       await load();
-      Alert.alert("Participation envoyee", "Votre demande a ete transmise pour validation admin.");
+      Alert.alert("Participation envoyee", "Votre demande a ete transmise au brasseur pour validation.");
     } catch (e: any) {
       Alert.alert("Erreur", e?.message || "Impossible de participer a cet evenement");
     } finally {
@@ -114,21 +145,10 @@ export default function ExploreScreen() {
     }
   }
 
-  async function contactBrewerForEvent(eventId: number) {
-    try {
-      setContactingKey(`event-${eventId}`);
-      const conversation = await openMessageConversationApi({ targetType: "EVENT", targetId: eventId });
-      router.push({ pathname: "/(user)/chat/[id]", params: { id: String(conversation.id) } } as any);
-    } catch (e: any) {
-      Alert.alert("Erreur", e?.message || "Impossible de contacter ce brasseur");
-    } finally {
-      setContactingKey(null);
-    }
-  }
-
   function renderEvent(item: PublicBreweryEvent) {
+    const isOwnBrewerEvent = item.Manufacturer?.ownerUserId != null && user?.id === item.Manufacturer.ownerUserId;
     return (
-      <View style={styles.card}>
+      <Pressable style={styles.card} onPress={() => router.push({ pathname: "/(user)/event/[id]", params: { id: String(item.id) } } as any)}>
         {item.imageUrl ? <Image source={{ uri: item.imageUrl }} style={styles.cardImage} resizeMode="cover" /> : null}
         <Text style={styles.cardTitle}>{item.title}</Text>
         <Text style={styles.cardMeta}>{item.Manufacturer?.name || "Brasserie"}</Text>
@@ -140,9 +160,7 @@ export default function ExploreScreen() {
         <Text style={styles.cardText}>{item.content}</Text>
         {participationLabel(item) ? <Text style={styles.statusInfo}>{participationLabel(item)}</Text> : null}
         <View style={styles.actionStack}>
-          <Button label="Voir details" variant="secondary" onPress={() => router.push({ pathname: "/(user)/event/[id]", params: { id: String(item.id) } } as any)} />
-          <Button label={contactingKey === `event-${item.id}` ? "Ouverture..." : "Contacter le brasseur"} variant="secondary" onPress={() => contactBrewerForEvent(item.id)} disabled={contactingKey != null} />
-          {!item.myParticipationStatus && !item.registrationClosed ? (
+          {!isOwnBrewerEvent && !item.myParticipationStatus && !item.registrationClosed ? (
             <Button
               label={submittingEventId === item.id ? "Envoi..." : "Participer"}
               onPress={() => onParticipate(item.id)}
@@ -150,20 +168,26 @@ export default function ExploreScreen() {
             />
           ) : null}
         </View>
-      </View>
+      </Pressable>
     );
   }
 
   function renderProduct(item: PublicBreweryProduct) {
+    const isOwnProduct = item.Manufacturer?.ownerUserId != null && user?.id === item.Manufacturer.ownerUserId;
     return (
-      <View style={styles.card}>
+      <Pressable
+        style={styles.card}
+        onPress={() => router.push({ pathname: "/(user)/product/[id]", params: { id: String(item.id), product: JSON.stringify(item) } } as any)}
+      >
         {item.imageUrl ? <Image source={{ uri: item.imageUrl }} style={styles.cardImage} resizeMode="cover" /> : null}
         <Text style={styles.cardTitle}>{item.name}</Text>
         <Text style={styles.cardMeta}>{item.Manufacturer?.name || "Brasserie"}</Text>
         <Text style={styles.cardText}>{item.description || "Aucune description"}</Text>
         <Text style={styles.price}>{item.price ? `${item.price} ${item.currency}` : "Prix non renseigne"}</Text>
-        <Button label={contactingKey === `product-${item.id}` ? "Ouverture..." : "Contacter le brasseur"} variant="secondary" onPress={() => contactBrewerForProduct(item.id)} disabled={contactingKey != null} style={styles.actionButton} />
-      </View>
+        {!isOwnProduct ? (
+          <Button label={contactingKey === `product-${item.id}` ? "Ouverture..." : "Contacter le brasseur"} variant="secondary" onPress={() => contactBrewerForProduct(item.id)} disabled={contactingKey != null} style={styles.actionButton} />
+        ) : null}
+      </Pressable>
     );
   }
 
@@ -180,6 +204,19 @@ export default function ExploreScreen() {
           <Text style={[styles.segmentText, mode === "products" ? styles.segmentTextActive : null]}>Produits</Text>
         </Pressable>
       </View>
+
+      {user?.role === "BREWER" ? (
+        <View style={styles.scopeWrap}>
+          <Pressable onPress={() => setScope("all")} style={[styles.scopeChip, scope === "all" ? styles.scopeChipActive : null]}>
+            <Text style={[styles.scopeChipText, scope === "all" ? styles.scopeChipTextActive : null]}>Tout</Text>
+          </Pressable>
+          <Pressable onPress={() => setScope("mine")} style={[styles.scopeChip, scope === "mine" ? styles.scopeChipActive : null]}>
+            <Text style={[styles.scopeChipText, scope === "mine" ? styles.scopeChipTextActive : null]}>
+              {mode === "events" ? "Mes evenements" : "Mes produits"}
+            </Text>
+          </Pressable>
+        </View>
+      ) : null}
 
       <View style={styles.searchWrap}>
         <Ionicons name="search-outline" size={18} color={colors.muted as any} style={styles.searchIcon} />
@@ -227,6 +264,11 @@ const styles = StyleSheet.create({
   segmentActive: { backgroundColor: colors.primary, borderColor: colors.primaryDark },
   segmentText: { color: colors.text, fontWeight: "900" },
   segmentTextActive: { color: "#2E1A0F" },
+  scopeWrap: { flexDirection: "row", gap: spacing.sm, marginBottom: spacing.md },
+  scopeChip: { borderRadius: 999, paddingVertical: spacing.sm, paddingHorizontal: spacing.md, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.card },
+  scopeChipActive: { backgroundColor: colors.primarySoft, borderColor: colors.primaryDark },
+  scopeChipText: { color: colors.text, fontWeight: "800", fontSize: 12 },
+  scopeChipTextActive: { color: colors.primaryDark },
   searchWrap: { flexDirection: "row", alignItems: "center", gap: spacing.sm, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.card, paddingHorizontal: spacing.md, paddingVertical: spacing.sm, borderRadius: 16, marginBottom: spacing.lg },
   searchIcon: { marginRight: 2 },
   search: { flex: 1, color: colors.text, paddingVertical: 2 },
