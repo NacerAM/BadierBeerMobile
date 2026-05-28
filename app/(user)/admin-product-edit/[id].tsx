@@ -65,7 +65,7 @@ export default function AdminProductEditScreen() {
         isAvailable,
       });
       Alert.alert("Enregistre", "Le produit a ete modifie", [
-        { text: "OK", onPress: () => router.back() },
+        { text: "OK", onPress: () => router.replace({ pathname: "/(user)/(tabs)/admin", params: { tab: "products" } } as any) },
       ]);
     } catch (e: any) {
       Alert.alert("Erreur", e?.message || "Impossible de modifier ce produit");

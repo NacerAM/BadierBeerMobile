@@ -40,6 +40,10 @@ export async function listMyProposalsApi() {
   return apiRequest<MyProposalsResponse>("/api/my/proposals", "GET");
 }
 
+export async function updateMyProposalApi(id: number, payload: ProposeGlassPayload) {
+  return apiRequest<MyProposal>(`/api/my/proposals/${id}`, "PATCH", payload);
+}
+
 export async function deleteMyProposalApi(id: number, password: string) {
   return apiRequest<{ message: string }>(`/api/my/proposals/${id}`, "DELETE", { password });
 }

@@ -17,9 +17,11 @@ export default function UserStackLayout() {
         <Stack.Screen name="glass/[id]" />
         <Stack.Screen name="profile/[id]" />
         <Stack.Screen name="notifications" />
+        <Stack.Screen name="my-events" />
         <Stack.Screen name="event/[id]" />
         <Stack.Screen name="product/[id]" />
         <Stack.Screen name="proposal/[id]" />
+        <Stack.Screen name="proposal-edit/[id]" />
         <Stack.Screen name="admin-stats" />
         <Stack.Screen name="admin-stats/[section]" />
         <Stack.Screen name="admin-glass/[id]" />

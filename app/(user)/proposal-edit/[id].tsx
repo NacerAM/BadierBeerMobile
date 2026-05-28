@@ -7,14 +7,15 @@ import Input from "../../../src/components/Input";
 import Button from "../../../src/components/Button";
 import { colors } from "../../../src/theme/colors";
 import { spacing } from "../../../src/theme/spacing";
-import { AdminPendingGlass, listAdminGlassesApi, updateAdminGlassApi } from "../../../src/api/adminApi";
+import { listMyProposalsApi, updateMyProposalApi, MyProposal } from "../../../src/api/proposalsApi";
 import { uploadImageApi } from "../../../src/api/uploadApi";
 
-export default function AdminGlassEditScreen() {
+export default function ProposalEditScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
-  const glassId = Number(id);
-  const [glass, setGlass] = useState<AdminPendingGlass | null>(null);
+  const proposalId = Number(id);
+  const [proposal, setProposal] = useState<MyProposal | null>(null);
   const [name, setName] = useState("");
+  const [manufacturerName, setManufacturerName] = useState("");
   const [description, setDescription] = useState("");
   const [imageUrls, setImageUrls] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
@@ -28,24 +29,30 @@ export default function AdminGlassEditScreen() {
     try {
       setLoading(true);
       setError(null);
-      const res = await listAdminGlassesApi();
-      const item = (res.items || []).find((entry) => Number(entry.id) === glassId) || null;
+      const res = await listMyProposalsApi();
+      const item = (res.items || []).find((entry) => Number(entry.id) === proposalId) || null;
       if (!item) {
-        setGlass(null);
-        setError("Verre introuvable");
+        setProposal(null);
+        setError("Proposition introuvable");
         return;
       }
-      setGlass(item);
+      if (item.status !== "EN_ATTENTE") {
+        setProposal(null);
+        setError("Seules les propositions en attente peuvent etre modifiees");
+        return;
+      }
+      setProposal(item);
       setName(item.name || "");
+      setManufacturerName(item.Manufacturer?.name || "");
       setDescription(item.description || "");
       const orderedImages = [...(item.images || [])].sort((a, b) => Number(b.isPrimary) - Number(a.isPrimary));
       setImageUrls(orderedImages.map((img) => img.url));
     } catch (e: any) {
-      setError(e?.message || "Impossible de charger ce verre");
+      setError(e?.message || "Impossible de charger cette proposition");
     } finally {
       setLoading(false);
     }
-  }, [glassId]);
+  }, [proposalId]);
 
   useEffect(() => {
     load();
@@ -63,7 +70,7 @@ export default function AdminGlassEditScreen() {
       setUploading(true);
       const uploaded = await uploadImageApi({
         uri: asset.uri,
-        fileName: asset.fileName || `glass-${Date.now()}.jpg`,
+        fileName: asset.fileName || `proposal-${Date.now()}.jpg`,
         mimeType: asset.mimeType || "image/jpeg",
         file: (asset as any).file,
       });
@@ -88,18 +95,31 @@ export default function AdminGlassEditScreen() {
       Alert.alert("Erreur", "Le nom du verre est requis");
       return;
     }
+    if (!manufacturerName.trim()) {
+      Alert.alert("Erreur", "Le fabricant est requis");
+      return;
+    }
+    if (!description.trim() || description.trim().length < 5) {
+      Alert.alert("Erreur", "La description est trop courte");
+      return;
+    }
+    if (!imageUrls.length) {
+      Alert.alert("Erreur", "Au moins une image est requise");
+      return;
+    }
     try {
       setSaving(true);
-      await updateAdminGlassApi(glassId, {
+      await updateMyProposalApi(proposalId, {
         name: name.trim(),
-        description: description.trim() || null,
+        manufacturerName: manufacturerName.trim(),
+        description: description.trim(),
         imageUrls,
       });
-      Alert.alert("Enregistre", "Le verre a ete modifie", [
-        { text: "OK", onPress: () => router.replace({ pathname: "/(user)/(tabs)/admin", params: { tab: "glasses" } } as any) },
+      Alert.alert("Enregistre", "Votre proposition a ete modifiee", [
+        { text: "OK", onPress: () => router.replace({ pathname: "/(user)/(tabs)/collection", params: { filter: "pending" } } as any) },
       ]);
     } catch (e: any) {
-      Alert.alert("Erreur", e?.message || "Impossible de modifier ce verre");
+      Alert.alert("Erreur", e?.message || "Impossible de modifier cette proposition");
     } finally {
       setSaving(false);
     }
@@ -114,10 +134,10 @@ export default function AdminGlassEditScreen() {
     );
   }
 
-  if (error || !glass) {
+  if (error || !proposal) {
     return (
       <View style={styles.center}>
-        <Text style={styles.errorText}>{error || "Verre introuvable"}</Text>
+        <Text style={styles.errorText}>{error || "Proposition introuvable"}</Text>
         <Button label="Reessayer" onPress={load} />
       </View>
     );
@@ -126,21 +146,21 @@ export default function AdminGlassEditScreen() {
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       <View style={styles.topBar}>
-        <Pressable onPress={() => router.back()} style={styles.backBtn} hitSlop={10}>
+        <Pressable onPress={() => router.replace({ pathname: "/(user)/(tabs)/collection", params: { filter: "pending" } } as any)} style={styles.backBtn} hitSlop={10}>
           <Ionicons name="chevron-back" size={20} color={colors.text as any} />
         </Pressable>
-        <Text style={styles.topTitle}>Modifier le verre</Text>
+        <Text style={styles.topTitle}>Modifier la proposition</Text>
         <View style={{ width: 40 }} />
       </View>
 
       <View style={styles.card}>
         <View style={styles.heroWrap}>
-          {primaryImage ? <Image source={{ uri: primaryImage }} style={styles.heroImage} resizeMode="cover" /> : <Text style={styles.imageEmoji}>🍺</Text>}
+          {primaryImage ? <Image source={{ uri: primaryImage }} style={styles.heroImage} resizeMode="cover" /> : <Text style={styles.imageEmoji}>?</Text>}
         </View>
-        <Text style={styles.meta}>{glass.Manufacturer?.name || "Brasserie inconnue"}</Text>
-        {glass.createdBy?.username ? <Text style={styles.meta}>Ajoute par {glass.createdBy.username}</Text> : null}
+        <Text style={styles.meta}>Proposition en attente</Text>
 
         <Input label="Nom" value={name} onChangeText={setName} />
+        <Input label="Fabricant" value={manufacturerName} onChangeText={setManufacturerName} />
         <Input label="Description" value={description} onChangeText={setDescription} multiline style={styles.multilineInput} />
 
         <View style={styles.section}>

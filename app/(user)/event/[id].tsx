@@ -1,12 +1,14 @@
-﻿import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import { ActivityIndicator, Alert, Image, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { openBrowserAsync } from "expo-web-browser";
 import { router, useFocusEffect, useLocalSearchParams } from "expo-router";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import Button from "../../../src/components/Button";
 import { colors } from "../../../src/theme/colors";
 import { spacing } from "../../../src/theme/spacing";
 import { typography } from "../../../src/theme/typography";
-import { getPublicEventApi, participateInEventApi, PublicBreweryEvent } from "../../../src/api/publicContentApi";
+import { buildMyEventInvitationPdfUrl, getPublicEventApi, participateInEventApi, PublicBreweryEvent } from "../../../src/api/publicContentApi";
+import { openMessageConversationApi } from "../../../src/api/messagesApi";
 import { useAuth } from "../../../src/store/useAuth";
 
 function formatDateTime(value?: string | null) {
@@ -24,14 +26,14 @@ function formatDateTime(value?: string | null) {
 
 export default function EventDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
-  const { user } = useAuth();
+  const { user, token } = useAuth();
   const eventId = Number(id);
   const isAdmin = user?.role === "ADMIN";
   const [event, setEvent] = useState<PublicBreweryEvent | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
-  const [contactingAdmin, setContactingAdmin] = useState(false);
+  const [contactingBrewer, setContactingBrewer] = useState(false);
 
   const load = useCallback(async () => {
     try {
@@ -63,15 +65,27 @@ export default function EventDetailScreen() {
     }
   }
 
-  async function onContactAdmin() {
+  async function onContactBrewer() {
     try {
-      setContactingAdmin(true);
-      const conversation = await openMessageConversationApi({ targetType: "ADMIN_SUPPORT", initialMessage: `Bonjour, je souhaite signaler ou poser une question au sujet de l'evenement #${eventId}.` });
+      setContactingBrewer(true);
+      const conversation = await openMessageConversationApi({ targetType: "EVENT", targetId: eventId });
       router.push({ pathname: "/(user)/chat/[id]", params: { id: String(conversation.id) } } as any);
     } catch (e: any) {
-      Alert.alert("Erreur", e?.message || "Impossible de contacter l'administrateur");
+      Alert.alert("Erreur", e?.message || "Impossible de contacter le brasseur");
     } finally {
-      setContactingAdmin(false);
+      setContactingBrewer(false);
+    }
+  }
+
+  async function onDownloadInvitation() {
+    if (!token || !event) {
+      Alert.alert("Erreur", "Session introuvable");
+      return;
+    }
+    try {
+      await openBrowserAsync(buildMyEventInvitationPdfUrl(event.id, token));
+    } catch (e: any) {
+      Alert.alert("Erreur", e?.message || "Impossible de telecharger l'invitation");
     }
   }
 
@@ -109,14 +123,17 @@ export default function EventDetailScreen() {
         {event.myParticipationStatus === "EN_ATTENTE" ? <Text style={styles.statusInfo}>Votre participation est en attente de validation.</Text> : null}
         {event.myParticipationStatus === "REJETE" ? (
           <Text style={styles.statusInfo}>
-            Votre participation a ete rejetee{event.myParticipationRejectReason ? ` · Motif: ${event.myParticipationRejectReason}` : "."}
+            Votre participation a ete rejetee{event.myParticipationRejectReason ? ` - Motif: ${event.myParticipationRejectReason}` : "."}
           </Text>
         ) : null}
         {!event.myParticipationStatus && event.registrationClosed ? <Text style={styles.statusInfo}>Les inscriptions sont cloturees.</Text> : null}
 
         <View style={styles.actionStack}>
           {!isAdmin ? (
-            <Button label={contactingAdmin ? "Ouverture..." : "Contacter l'admin"} variant="secondary" onPress={onContactAdmin} disabled={contactingAdmin} />
+            <Button label={contactingBrewer ? "Ouverture..." : "Contacter le brasseur"} variant="secondary" onPress={onContactBrewer} disabled={contactingBrewer} />
+          ) : null}
+          {event.myParticipationStatus === "VALIDE" ? (
+            <Button label="Telecharger l'invitation" variant="secondary" onPress={onDownloadInvitation} />
           ) : null}
           {!isOwnBrewerEvent && !event.myParticipationStatus && !event.registrationClosed ? (
             <Button label={submitting ? "Envoi..." : "Participer a l'evenement"} onPress={onParticipate} disabled={submitting} />

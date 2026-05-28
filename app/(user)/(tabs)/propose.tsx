@@ -1,9 +1,11 @@
 ﻿import React, { useState } from "react";
 import { Text, StyleSheet, ScrollView, Alert, View, Pressable, Platform, ToastAndroid } from "react-native";
 import { router } from "expo-router";
+import Ionicons from "@expo/vector-icons/Ionicons";
 import { Image, Modal, FlatList, Dimensions } from "react-native";
 import Input from "../../../src/components/Input";
 import Button from "../../../src/components/Button";
+import MultiImageUploadField from "../../../src/components/MultiImageUploadField";
 import { proposeGlassApi } from "../../../src/api/proposalsApi";
 import { colors } from "../../../src/theme/colors";
 import { spacing } from "../../../src/theme/spacing";
@@ -15,7 +17,7 @@ export default function ProposeScreen() {
   const [name, setName] = useState("");
   const [manufacturerName, setManufacturerName] = useState("");
   const [description, setDescription] = useState("");
-  const [imageUrls, setImageUrls] = useState<string[]>([""]); // plusieurs images
+  const [imageUrls, setImageUrls] = useState<string[]>([]);
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -36,29 +38,7 @@ export default function ProposeScreen() {
 
     const urls = sanitizeUrls();
     if (urls.length === 0) return "Au moins une image est requise";
-    for (const url of urls) {
-      if (!url.startsWith("http")) return "URL image invalide";
-    }
     return null;
-  }
-
-  function addImageField() {
-    if (imageUrls.length >= 6) return;
-    setImageUrls([...imageUrls, ""]);
-  }
-
-  function updateImageAt(index: number, value: string) {
-    const next = [...imageUrls];
-    next[index] = value;
-    setImageUrls(next);
-  }
-
-  function removeImageAt(index: number) {
-    if (imageUrls.length === 1) {
-      setImageUrls([""]);
-      return;
-    }
-    setImageUrls(imageUrls.filter((_, i) => i !== index));
   }
 
   async function onSubmit() {
@@ -84,9 +64,9 @@ export default function ProposeScreen() {
       setName("");
       setManufacturerName("");
       setDescription("");
-      setImageUrls([""]);
+      setImageUrls([]);
 
-      router.push("/(user)/proposals" as any);
+      router.push({ pathname: "/(user)/(tabs)/collection", params: { filter: "pending" } } as any);
     } catch (e: any) {
       setError(e?.message || "Erreur lors de l’envoi");
     } finally {
@@ -100,7 +80,13 @@ export default function ProposeScreen() {
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={{ paddingBottom: spacing.xl }}>
-      <Text style={styles.title}>Proposer un verre</Text>
+      <View style={styles.topBar}>
+        <Pressable onPress={() => router.push("/(user)/(tabs)/brewer" as any)} style={styles.backBtn} hitSlop={10}>
+          <Ionicons name="chevron-back" size={20} color={colors.text as any} />
+        </Pressable>
+        <Text style={styles.title}>Proposer un verre</Text>
+        <View style={{ width: 40 }} />
+      </View>
       <Text style={styles.subtitle}>
         Remplissez les informations. La proposition sera examinée par un administrateur.
       </Text>
@@ -119,31 +105,7 @@ export default function ProposeScreen() {
         style={{ minHeight: 90, textAlignVertical: "top" } as any}
       />
 
-      <View style={{ gap: spacing.sm }}>
-        {imageUrls.map((u, idx) => (
-          <View key={idx} style={{ gap: 4 }}>
-            <Input
-              label={`URL image ${idx + 1}`}
-              value={u}
-              onChangeText={(v: string) => updateImageAt(idx, v)}
-              autoCapitalize="none"
-            />
-            {u.trim().startsWith("http") && (
-              <Pressable onPress={() => { const i = cleanUrls.findIndex((x) => x === u.trim()); setViewerIndex(i >= 0 ? i : 0); setViewerVisible(true); }}>
-                <Image source={{ uri: u }} style={{ width: 120, height: 120, borderRadius: 12, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.card, marginTop: 6 }} />
-              </Pressable>
-            )}
-            {imageUrls.length > 1 && (
-              <Pressable onPress={() => removeImageAt(idx)}>
-                <Text style={{ color: colors.dangerText, fontWeight: "600" }}>Supprimer cette image</Text>
-              </Pressable>
-            )}
-          </View>
-        ))}
-        {imageUrls.length < 6 && (
-          <Button label="Ajouter une image" variant="secondary" onPress={addImageField} />
-        )}
-      </View>
+      <MultiImageUploadField label="Images du verre" values={imageUrls} onChange={setImageUrls} />
 
       <Button
         label={loading ? "Envoi..." : "Envoyer la proposition"}
@@ -176,7 +138,23 @@ export default function ProposeScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, padding: spacing.lg, backgroundColor: colors.bg },
-  title: { fontSize: typography.h1, fontWeight: "800", color: colors.text, marginBottom: spacing.sm },
+  topBar: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: spacing.lg, marginTop: spacing.lg },
+  backBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    backgroundColor: colors.card,
+    borderWidth: 1,
+    borderColor: colors.border,
+    alignItems: "center",
+    justifyContent: "center",
+    shadowColor: colors.shadow as any,
+    shadowOpacity: 0.15,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 6 },
+    elevation: 2,
+  },
+  title: { fontSize: typography.h1, fontWeight: "800", color: colors.text },
   subtitle: { color: colors.muted, marginBottom: spacing.lg },
   error: { color: colors.dangerText, fontWeight: "700", marginBottom: spacing.md },
   viewerOverlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.95)", alignItems: "center", justifyContent: "center" },

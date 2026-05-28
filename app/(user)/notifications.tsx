@@ -12,6 +12,7 @@ import {
   markAllNotificationsReadApi,
   markNotificationReadApi,
 } from "../../src/api/notificationsApi";
+import { useAuth } from "../../src/store/useAuth";
 
 function formatDateTime(value?: string) {
   if (!value) return "";
@@ -28,12 +29,14 @@ function formatDateTime(value?: string) {
 
 function notificationColor(type: AppNotification["type"]) {
   if (type === "GLASS_VALIDATED") return colors.successText;
-  if (type === "GLASS_REJECTED" || type === "EVENT_CANCELLED") return colors.dangerText;
-  if (type === "GLASS_RATED" || type === "GLASS_UPDATED" || type === "EVENT_UPDATED") return colors.primaryDark;
+  if (type === "EVENT_VALIDATED") return colors.successText;
+  if (type === "GLASS_REJECTED" || type === "EVENT_REJECTED" || type === "EVENT_CANCELLED" || type === "EVENT_PARTICIPATION_REJECTED") return colors.dangerText;
+  if (type === "GLASS_RATED" || type === "GLASS_UPDATED" || type === "EVENT_UPDATED" || type === "EVENT_PARTICIPATION_VALIDATED") return colors.primaryDark;
   return colors.warningText;
 }
 
 export default function NotificationsScreen() {
+  const { user } = useAuth();
   const pathname = usePathname();
   const showBack = !pathname?.includes("/(user)/(tabs)/notifications");
   const [items, setItems] = useState<AppNotification[]>([]);
@@ -79,15 +82,51 @@ export default function NotificationsScreen() {
       }
     } catch {}
 
-    if (item.type === "GLASS_VALIDATED" || item.type === "GLASS_REJECTED" || item.type === "GLASS_RATED" || item.type === "GLASS_UPDATED") {
+    if (item.type === "GLASS_VALIDATED" || item.type === "GLASS_REJECTED" || item.type === "GLASS_UPDATED") {
+      if (item.payload?.glassId) {
+        router.push({ pathname: "/(user)/proposal/[id]", params: { id: String(item.payload.glassId) } } as any);
+      }
+      return;
+    }
+
+    if (item.type === "GLASS_RATED") {
       if (item.payload?.glassId) {
         router.push({ pathname: "/(user)/glass/[id]", params: { id: String(item.payload.glassId) } } as any);
       }
       return;
     }
 
-    if ((item.type === "EVENT_UPCOMING" || item.type === "EVENT_UPDATED" || item.type === "EVENT_CANCELLED") && item.payload?.eventId) {
+    if (item.type === "EVENT_CANCELLED" && user?.role === "BREWER") {
+      router.push("/(user)/(tabs)/brewer-events" as any);
+      return;
+    }
+
+    if (
+      (
+        item.type === "EVENT_UPCOMING" ||
+        item.type === "EVENT_UPDATED" ||
+        item.type === "EVENT_CANCELLED" ||
+        item.type === "EVENT_PARTICIPATION_VALIDATED" ||
+        item.type === "EVENT_PARTICIPATION_REJECTED"
+      ) &&
+      item.payload?.eventId
+    ) {
       router.push({ pathname: "/(user)/event/[id]", params: { id: String(item.payload.eventId) } } as any);
+      return;
+    }
+
+    if (item.type === "EVENT_PARTICIPATION_REQUESTED") {
+      router.push("/(user)/(tabs)/brewer-events" as any);
+      return;
+    }
+
+    if (item.type === "EVENT_PROPOSAL_SUBMITTED") {
+      router.push("/(user)/(tabs)/admin" as any);
+      return;
+    }
+
+    if (item.type === "EVENT_VALIDATED" || item.type === "EVENT_REJECTED") {
+      router.push("/(user)/(tabs)/brewer-events" as any);
     }
   }
 

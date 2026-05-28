@@ -1,8 +1,10 @@
-﻿import { apiRequest } from "./client";
+import { apiRequest } from "./client";
+import { API_BASE_URL } from "../config/api";
 
 export type PublicManufacturer = {
   id: number;
   name: string;
+  ownerUserId?: number;
   country?: string | null;
   city?: string | null;
   websiteUrl?: string | null;
@@ -35,6 +37,7 @@ export type PublicBreweryEvent = {
   participantsCount?: number;
   registrationClosed?: boolean;
   myParticipationStatus?: ParticipationStatus | null;
+  myParticipationRejectReason?: string | null;
   Manufacturer?: PublicManufacturer;
   createdAt?: string;
 };
@@ -53,4 +56,12 @@ export async function getPublicEventApi(eventId: number) {
 
 export async function participateInEventApi(eventId: number) {
   return apiRequest<{ status: ParticipationStatus }>(`/api/breweries/events/${eventId}/participate`, "POST");
+}
+
+export async function listMyValidatedEventsApi() {
+  return apiRequest<{ items: PublicBreweryEvent[] }>("/api/breweries/events/me/validated", "GET");
+}
+
+export function buildMyEventInvitationPdfUrl(eventId: number, token: string) {
+  return `${API_BASE_URL}/api/breweries/events/${eventId}/invitation?token=${encodeURIComponent(token)}`;
 }

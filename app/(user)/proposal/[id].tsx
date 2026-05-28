@@ -15,7 +15,7 @@ function badge(status?: string) {
 }
 
 export default function ProposalDetailScreen() {
-  const { id } = useLocalSearchParams<{ id: string }>();
+  const { id, proposal } = useLocalSearchParams<{ id: string; proposal?: string }>();
   const proposalId = Number(id);
   const { has, toggle, refresh } = useCollection();
   const [item, setItem] = useState<MyProposal | null>(null);
@@ -25,28 +25,45 @@ export default function ProposalDetailScreen() {
   const [viewerVisible, setViewerVisible] = useState(false);
   const [viewerIndex, setViewerIndex] = useState(0);
 
+  const proposalFromParams = useMemo(() => {
+    if (!proposal || Array.isArray(proposal)) return null;
+    try {
+      const parsed = JSON.parse(proposal);
+      return parsed as MyProposal;
+    } catch {
+      return null;
+    }
+  }, [proposal]);
+
   useEffect(() => {
     async function load() {
       try {
         setLoading(true);
         setError(null);
+        if (proposalFromParams && Number(proposalFromParams.id) === proposalId) {
+          setItem(proposalFromParams);
+        }
         await refresh();
         const res = await listMyProposalsApi();
         const found = (res.items || []).find((entry) => Number(entry.id) === proposalId) || null;
         if (!found) {
-          setError("Proposition introuvable");
-          setItem(null);
+          if (!proposalFromParams || Number(proposalFromParams.id) !== proposalId) {
+            setError("Proposition introuvable");
+            setItem(null);
+          }
         } else {
           setItem(found);
         }
       } catch (e: any) {
-        setError(e?.message || "Erreur de chargement");
+        if (!proposalFromParams) {
+          setError(e?.message || "Erreur de chargement");
+        }
       } finally {
         setLoading(false);
       }
     }
     load();
-  }, [proposalId, refresh]);
+  }, [proposalId, proposalFromParams, refresh]);
 
   const imageUrls = useMemo(() => (item?.images || []).map((image) => image.url), [item]);
   const primaryImage = imageUrls[0] || null;
@@ -65,7 +82,17 @@ export default function ProposalDetailScreen() {
   return (
     <ScrollView style={styles.container} contentContainerStyle={{ paddingBottom: spacing.xxl }}>
       <View style={styles.topBar}>
-        <Pressable onPress={() => router.back()} style={styles.backBtn} hitSlop={10}>
+        <Pressable
+          onPress={() => {
+            if (item?.status === "EN_ATTENTE") {
+              router.replace({ pathname: "/(user)/(tabs)/collection", params: { filter: "pending" } } as any);
+              return;
+            }
+            router.back();
+          }}
+          style={styles.backBtn}
+          hitSlop={10}
+        >
           <Ionicons name="chevron-back" size={20} color={colors.text as any} />
         </Pressable>
         <Text style={styles.topTitle}>Détail de la proposition</Text>
@@ -98,6 +125,15 @@ export default function ProposalDetailScreen() {
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Raison du rejet</Text>
             <Text style={styles.reject}>{item.rejectReason}</Text>
+          </View>
+        ) : null}
+
+        {item.status === "EN_ATTENTE" ? (
+          <View style={styles.section}>
+            <Button
+              label="Modifier"
+              onPress={() => router.push({ pathname: "/(user)/proposal-edit/[id]", params: { id: String(item.id) } } as any)}
+            />
           </View>
         ) : null}
 

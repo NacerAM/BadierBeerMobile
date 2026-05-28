@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { Alert, Image, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 import Ionicons from "@expo/vector-icons/Ionicons";
-import { router, useFocusEffect } from "expo-router";
+import { router, useFocusEffect, useLocalSearchParams } from "expo-router";
 import Button from "../../../src/components/Button";
 import Input from "../../../src/components/Input";
 import { colors } from "../../../src/theme/colors";
@@ -71,6 +71,7 @@ function matchesSearch(query: string, values: Array<string | number | null | und
 }
 
 export default function AdminScreen() {
+  const params = useLocalSearchParams<{ tab?: string }>();
   const [tab, setTab] = useState<AdminTab>("accounts");
   const [accounts, setAccounts] = useState<AdminAccount[]>([]);
   const [glasses, setGlasses] = useState<AdminPendingGlass[]>([]);
@@ -124,6 +125,13 @@ export default function AdminScreen() {
     load();
   }, [load]);
   useFocusEffect(useCallback(() => { load(); }, [load]));
+
+  useEffect(() => {
+    const nextTab = params.tab;
+    if (nextTab === "accounts" || nextTab === "glasses" || nextTab === "products" || nextTab === "events") {
+      setTab(nextTab);
+    }
+  }, [params.tab]);
 
   const pendingGlasses = useMemo(() => glasses.filter((item) => item.status === "EN_ATTENTE"), [glasses]);
   const managedGlasses = useMemo(() => glasses.filter((item) => item.status === "VALIDE"), [glasses]);

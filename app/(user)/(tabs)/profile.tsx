@@ -124,6 +124,14 @@ export default function Profile() {
         </Pressable>
       ) : null}
 
+      {!isAdmin ? (
+        <Pressable style={styles.item} onPress={() => router.push("/(user)/my-events" as any)}>
+          <Text style={styles.itemTitle}>Evenements</Text>
+          <Text style={styles.itemSub}>Voir les evenements ou votre participation est validee</Text>
+          <Text style={styles.itemArrow}>›</Text>
+        </Pressable>
+      ) : null}
+
       <Pressable style={styles.item} onPress={() => router.push("/(user)/(tabs)/settings" as any)}>
         <Text style={styles.itemTitle}>Favoris et parametres</Text>
         <Text style={styles.itemSub}>Changer le mot de passe, preferences...</Text>

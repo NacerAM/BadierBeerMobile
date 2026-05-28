@@ -1,7 +1,7 @@
 ﻿import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { View, Text, FlatList, ActivityIndicator, StyleSheet, Pressable, TextInput, Image } from "react-native";
 import { useFocusEffect } from "@react-navigation/native";
-import { router } from "expo-router";
+import { router, useLocalSearchParams } from "expo-router";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { useCollection } from "../../../src/store/useCollection";
 import { listMyProposalsApi } from "../../../src/api/proposalsApi";
@@ -34,6 +34,7 @@ function statusBadge(status: DisplayItem["status"], inCollection: boolean) {
 }
 
 export default function CollectionScreen() {
+  const params = useLocalSearchParams<{ filter?: string }>();
   const { items, loading, error, refresh, has, toggle } = useCollection();
   const [q, setQ] = useState("");
   const [filter, setFilter] = useState<FilterMode>("collection");
@@ -66,6 +67,13 @@ export default function CollectionScreen() {
     }, [refresh, loadProposals])
   );
 
+  useEffect(() => {
+    const nextFilter = params.filter;
+    if (nextFilter === "collection" || nextFilter === "validated" || nextFilter === "pending" || nextFilter === "rejected" || nextFilter === "validated_missing") {
+      setFilter(nextFilter);
+    }
+  }, [params.filter]);
+
   const normalizedItems = useMemo<DisplayItem[]>(() => {
     const collectionIds = new Set(items.map((item) => item.glassId));
 
@@ -91,13 +99,19 @@ export default function CollectionScreen() {
       source: "collection" as const,
     }));
 
-    const seen = new Set<string>();
-    return [...collectionEntries, ...proposalEntries].filter((entry) => {
-      const uniqueKey = `glass-${entry.glassId}-${entry.source}`;
-      if (seen.has(uniqueKey)) return false;
-      seen.add(uniqueKey);
-      return true;
-    });
+    const byGlassId = new Map<number, DisplayItem>();
+
+    for (const entry of collectionEntries) {
+      byGlassId.set(entry.glassId, entry);
+    }
+
+    for (const entry of proposalEntries) {
+      if (!byGlassId.has(entry.glassId)) {
+        byGlassId.set(entry.glassId, entry);
+      }
+    }
+
+    return Array.from(byGlassId.values());
   }, [items, proposals]);
 
   const filtered = useMemo(() => {
@@ -198,12 +212,19 @@ export default function CollectionScreen() {
             return (
               <Pressable
                 style={styles.card}
-                onPress={() =>
+                onPress={() => {
+                  if (item.source === "proposal") {
+                    router.push({
+                      pathname: "/(user)/proposal/[id]",
+                      params: { id: String(item.id), proposal: JSON.stringify(item.glass) },
+                    } as any);
+                    return;
+                  }
                   router.push({
                     pathname: "/(user)/glass/[id]",
                     params: { id: String(item.glassId) },
-                  } as any)
-                }
+                  } as any);
+                }}
               >
                 <View style={styles.cardImage}>
                   {primaryImageUrl(glass) ? (
