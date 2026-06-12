@@ -1,0 +1,92 @@
+﻿import React, { useState } from "react";
+import { View, Text, StyleSheet, Alert, Pressable } from "react-native";
+import { Link, router, useLocalSearchParams } from "expo-router";
+import Ionicons from "@expo/vector-icons/Ionicons";
+import { colors } from "../../src/theme/colors";
+import { spacing } from "../../src/theme/spacing";
+import { typography } from "../../src/theme/typography";
+import Input from "../../src/components/Input";
+import Button from "../../src/components/Button";
+import { useAuth } from "../../src/store/useAuth";
+import { loginApi, resendVerificationApi } from "../../src/api/authApi";
+
+export default function LoginScreen() {
+  const { redirect } = useLocalSearchParams<{ redirect?: string }>();
+  const { login } = useAuth();
+
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [errors, setErrors] = useState<{ email?: string; password?: string }>({});
+
+  async function onSubmit() {
+    const e: typeof errors = {};
+    if (!email.trim()) e.email = "Email requis";
+    if (!password.trim()) e.password = "Mot de passe requis";
+    setErrors(e);
+
+    if (Object.keys(e).length === 0) {
+      try {
+        const res = await loginApi(email, password);
+        await login({ token: res.token, user: res.user });
+        if (redirect) { router.replace(redirect as any); } else { router.replace("/(user)/" as any); }
+      } catch (err: any) {
+        const msg = err?.message || "Échec de la connexion";
+        const canResendVerification = err?.status === 403 && email.trim() && msg === "Email non verifie";
+        if (canResendVerification) {
+          Alert.alert(
+            "Compte non actif",
+            msg,
+            [
+              {
+                text: "Renvoyer l'email",
+                onPress: async () => {
+                  try {
+                    const r = await resendVerificationApi(email.trim());
+                    const opts: any[] = [{ text: "OK" }];
+                    if (r?.previewUrl) {
+                      const { Linking } = require("react-native");
+                      opts.unshift({ text: "Voir l’email", onPress: () => Linking.openURL(r.previewUrl as any) });
+                    }
+                    Alert.alert("Envoyé", r?.message || "Email renvoyé.", opts);
+                  } catch (e2: any) {
+                    Alert.alert("Erreur", e2?.message || "Échec de renvoi");
+                  }
+                },
+              },
+              { text: "OK" },
+            ]
+          );
+        } else if (err?.status === 403) {
+          Alert.alert("Compte non actif", msg, [{ text: "OK" }]);
+        } else {
+          Alert.alert("Erreur", msg);
+        }
+      }
+    }
+  }
+
+  return (
+    <View style={styles.container}>
+      <Text style={styles.title}>Connexion</Text>
+
+      <Input label="Email" value={email} onChangeText={setEmail} keyboardType="email-address" autoCapitalize="none" error={errors.email} />
+      <Input label="Mot de passe" value={password} onChangeText={setPassword} secureTextEntry error={errors.password} />
+
+      <Button label="Se connecter" onPress={onSubmit} />
+
+      <View style={styles.links}>
+        <Link href={"/(visitor)/forgot-password" as any} style={styles.link}>Mot de passe oublié ?</Link>
+        <Link href={"/(visitor)/register" as any} style={styles.link}>Créer un compte</Link>
+      </View>
+
+          </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: { flex: 1, padding: spacing.lg, backgroundColor: colors.bg },
+  title: { fontSize: typography.h1, fontWeight: '700', marginBottom: spacing.lg, color: colors.text },
+  links: { marginTop: spacing.lg, gap: spacing.sm },
+  link: { color: colors.primaryDark, fontWeight: '600' },
+});
+
